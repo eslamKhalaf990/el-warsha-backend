@@ -30,7 +30,9 @@ public class ProductService {
         ProductModel existing = getProductById(id);
         existing.setName(updatedProduct.getName());
         existing.setDescription(updatedProduct.getDescription());
-        existing.setPrice(updatedProduct.getPrice());
+        existing.setBuyingPrice(updatedProduct.getBuyingPrice());
+        existing.setSellingPrice(updatedProduct.getSellingPrice());
+        existing.setQuantity(updatedProduct.getQuantity());
         existing.setCategory(updatedProduct.getCategory());
         existing.setSku(updatedProduct.getSku());
         existing.setUpdatedAt(LocalDateTime.now());

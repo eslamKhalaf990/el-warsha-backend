@@ -23,14 +23,23 @@ public class ProductModel {
     @Column(name = "Description")
     private String Description;
 
-    @Column(name = "Price")
-    private Double Price;
+    @Column(name = "BuyingPrice")
+    private Double BuyingPrice;
+
+    @Column(name = "SellingPrice")
+    private Double SellingPrice;
 
     @Column(name = "Category")
     private String Category;
 
+    @Column(name = "ImageUrl")
+    private String ImageUrl;
+
     @Column(name = "Sku")
     private String Sku;
+
+    @Column(name = "Quantity")
+    private String Quantity;
 
     @Column(name = "CreatedAt")
     private LocalDateTime CreatedAt;
