@@ -2,7 +2,7 @@ package com.warsha.erp.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.warsha.erp.models.ProductModel;
+import com.warsha.erp.entities.Product;
 import com.warsha.erp.services.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -24,7 +24,7 @@ public class ProductController {
     private ProductService productService;
 
     @GetMapping
-    public List<ProductModel> getAll() {
+    public List<Product> getAll() {
         return productService.getAllProducts();
     }
 
@@ -55,23 +55,23 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductModel> getById(@PathVariable Long id) {
+    public ResponseEntity<Product> getById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
-    public ResponseEntity<ProductModel> create(
+    public ResponseEntity<Product> create(
             @RequestPart("product") String productJson,
             @RequestPart("image") MultipartFile image) throws JsonProcessingException {
 
         // Convert JSON string to ProductModel using Jackson
-        ProductModel product = new ObjectMapper().readValue(productJson, ProductModel.class);
+        Product product = new ObjectMapper().readValue(productJson, Product.class);
 
         return new ResponseEntity<>(productService.createProduct(product, image), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductModel> update(@PathVariable Long id, @RequestBody ProductModel product) {
+    public ResponseEntity<Product> update(@PathVariable Long id, @RequestBody Product product) {
         return ResponseEntity.ok(productService.updateProduct(id, product));
     }
 

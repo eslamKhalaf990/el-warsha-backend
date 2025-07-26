@@ -1,0 +1,35 @@
+package com.warsha.erp.entities;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Setter
+@Getter
+@Entity
+@Table(name = "Orders")
+public class Order {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "OrderID")
+    private Long id;
+
+    @Column(name="OrderDate", nullable = false)
+    private LocalDate orderDate;
+
+    @Column(name= "Status", nullable = false)
+    private String status;  // e.g., "PENDING", "PAID", "SHIPPED"
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "CustomerID", nullable = false)
+    private Customer customer;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<OrderItems> items;
+}

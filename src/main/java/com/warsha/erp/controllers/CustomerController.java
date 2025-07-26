@@ -1,13 +1,10 @@
 package com.warsha.erp.controllers;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.warsha.erp.models.CustomerModel;
+import com.warsha.erp.entities.Customer;
 import com.warsha.erp.services.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -19,22 +16,22 @@ public class CustomerController {
     private CustomerService customerService;
 
     @GetMapping
-    public List<CustomerModel> getAll() {
+    public List<Customer> getAll() {
         return customerService.getAllCustomers();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CustomerModel> getById(@PathVariable Long id) {
+    public ResponseEntity<Customer> getById(@PathVariable Long id) {
         return ResponseEntity.ok(customerService.getCustomerByID(id));
     }
 
     @PostMapping
-    public ResponseEntity<CustomerModel> create(@RequestBody CustomerModel customer) {
+    public ResponseEntity<Customer> create(@RequestBody Customer customer) {
         return new ResponseEntity<>(customerService.createCustomer(customer), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CustomerModel> update(@PathVariable Long id, @RequestBody CustomerModel product) {
+    public ResponseEntity<Customer> update(@PathVariable Long id, @RequestBody Customer product) {
         return ResponseEntity.ok(customerService.updateCustomer(id, product));
     }
 

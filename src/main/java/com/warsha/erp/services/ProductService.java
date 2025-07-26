@@ -1,10 +1,9 @@
 package com.warsha.erp.services;
-import com.warsha.erp.models.ProductModel;
+import com.warsha.erp.entities.Product;
 import com.warsha.erp.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,11 +22,11 @@ public class ProductService {
     @Autowired
     private ProductRepository productRepository;
 
-    public List<ProductModel> getAllProducts() {
+    public List<Product> getAllProducts() {
         return productRepository.findAll();
     }
 
-    public ProductModel getProductById(Long id) {
+    public Product getProductById(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
     }
@@ -43,14 +42,14 @@ public class ProductService {
         }
     }
 
-    public ProductModel createProduct(ProductModel product, MultipartFile image) {
+    public Product createProduct(Product product, MultipartFile image) {
         // Step 1: Generate UUID SKU before saving
         String generatedSku = "SKU-" + UUID.randomUUID();
         product.setSku(generatedSku);
         product.setCreatedAt(LocalDateTime.now());
 
         // Step 2: Save product (now SKU is not null and unique)
-        ProductModel savedProduct = productRepository.save(product);
+        Product savedProduct = productRepository.save(product);
 
         // Step 3: Save product image
         if (image != null && !image.isEmpty()) {
@@ -72,8 +71,8 @@ public class ProductService {
         return savedProduct;
     }
 
-    public ProductModel updateProduct(Long id, ProductModel updatedProduct) {
-        ProductModel existing = getProductById(id);
+    public Product updateProduct(Long id, Product updatedProduct) {
+        Product existing = getProductById(id);
         existing.setName(updatedProduct.getName());
         existing.setDescription(updatedProduct.getDescription());
         existing.setBuyingPrice(updatedProduct.getBuyingPrice());

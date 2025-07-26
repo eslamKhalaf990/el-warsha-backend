@@ -1,4 +1,4 @@
-package com.warsha.erp.models;
+package com.warsha.erp.entities;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Table(name = "Customers")
-public class CustomerModel {
+public class Customer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
