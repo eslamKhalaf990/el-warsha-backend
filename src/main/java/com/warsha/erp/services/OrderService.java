@@ -37,7 +37,7 @@ public class OrderService {
         Order order = new Order();
         order.setCustomer(customer);
         order.setOrderDate(LocalDate.now());
-        order.setStatus("PENDING");
+        order.setStatus("Pending");
 
         List<OrderItems> itemList = new ArrayList<>();
 
