@@ -17,7 +17,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/products")
-@CrossOrigin // optional: allows cross-origin requests (good for Flutter)
+@CrossOrigin(origins = "https://elwarsha-35ad6.web.app",
+        allowedHeaders = "*")
 public class ProductController {
 
     @Autowired
