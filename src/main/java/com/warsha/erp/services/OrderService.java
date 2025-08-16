@@ -20,14 +20,16 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CustomerService customerService;
     private final ProductService productService;
+    private final InvoiceService invoiceService;
 
     @Autowired
     public OrderService(OrderRepository orderRepo,
                         CustomerService customerService,
-                        ProductService productService) {
+                        ProductService productService, InvoiceService invoiceService) {
         this.orderRepository = orderRepo;
         this.customerService = customerService;
         this.productService = productService;
+        this.invoiceService = invoiceService;
     }
 
     @Transactional
@@ -59,7 +61,12 @@ public class OrderService {
         }
 
         order.setItems(itemList);
-        return orderRepository.save(order);
+
+        Order savedOrder = orderRepository.save(order);
+
+        invoiceService.generateInvoice(savedOrder.getId());
+
+        return savedOrder;
     }
 
     public List<OrderResponse> getAllOrders() {
@@ -83,12 +90,11 @@ public class OrderService {
 
             // Map order items
             List<OrderItemDto> itemDTOs = order.getItems().stream().map(item -> {
-                OrderItemDto itemDTO = new OrderItemDto();
-                itemDTO.setProductId(item.getProduct().getProductID());
-                itemDTO.setProductName(item.getProduct().getName());
-                itemDTO.setQuantity(item.getQuantity());
-                itemDTO.setUnitPrice(item.getUnitPrice());
-                return itemDTO;
+                return new OrderItemDto(item.getProduct().getProductID(),
+                        item.getProduct().getName(),
+                        item.getQuantity(),
+                        item.getUnitPrice()
+                );
             }).collect(Collectors.toList());
 
             dto.setOrderItems(itemDTOs);

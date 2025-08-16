@@ -1,5 +1,6 @@
 package com.warsha.erp.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -23,11 +24,16 @@ public class Order {
     private LocalDate orderDate;
 
     @Column(name= "Status", nullable = false)
-    private String status;  // e.g., "PENDING", "PAID", "SHIPPED"
+    private String status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "CustomerID", nullable = false)
     private Customer customer;
+
+    @OneToOne
+    @JoinColumn(name = "InvoiceID", unique = true)  // ensures 1-to-1
+    @JsonBackReference
+    private Invoice invoice;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference

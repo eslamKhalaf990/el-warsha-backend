@@ -6,6 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
+@AllArgsConstructor
 public class OrderItemDto {
     private Long productId;
     private String productName;
