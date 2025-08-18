@@ -8,9 +8,11 @@ import com.warsha.erp.entities.Invoice;
 import com.warsha.erp.entities.Order;
 import com.warsha.erp.repository.InvoiceRepository;
 import com.warsha.erp.repository.OrderRepository;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -73,7 +75,11 @@ public class InvoiceService {
             textCell.addElement(new Paragraph("Address: " + invoice.getOrder().getCustomer().getAddress()));
 
             // Right Cell: Logo
-            Image logo = Image.getInstance("src/main/resources/static/logo.jpg");
+            InputStream logoStream = new ClassPathResource("static/logo.jpg").getInputStream();
+
+            // Create Image from InputStream
+            Image logo = Image.getInstance(logoStream.readAllBytes());
+
             logo.scaleToFit(100, 100);
 
             PdfPCell logoCell = new PdfPCell(logo);
