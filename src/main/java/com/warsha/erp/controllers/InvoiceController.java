@@ -45,6 +45,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/pdf/{id}")
+    @CrossOrigin(origins = "*", exposedHeaders = "Content-Disposition")
     public ResponseEntity<byte[]> getInvoicePdf(@PathVariable Long id) {
         Invoice invoice = invoiceService.getInvoiceById(id);
         byte[] pdfBytes = invoiceService.generateInvoicePdf(invoice);
