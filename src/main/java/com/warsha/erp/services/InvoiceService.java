@@ -75,20 +75,20 @@ public class InvoiceService {
             textCell.addElement(new Paragraph("Address: " + invoice.getOrder().getCustomer().getAddress()));
 
             // Right Cell: Logo
-            InputStream logoStream = new ClassPathResource("static/logo.jpg").getInputStream();
-
-            // Create Image from InputStream
-            Image logo = Image.getInstance(logoStream.readAllBytes());
-
-            logo.scaleToFit(100, 100);
-
-            PdfPCell logoCell = new PdfPCell(logo);
-            logoCell.setBorder(Rectangle.NO_BORDER);
-            logoCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+//            InputStream logoStream = new ClassPathResource("static/logo.jpg").getInputStream();
+//
+//            // Create Image from InputStream
+//            Image logo = Image.getInstance(logoStream.readAllBytes());
+//
+//            logo.scaleToFit(100, 100);
+//
+//            PdfPCell logoCell = new PdfPCell(logo);
+//            logoCell.setBorder(Rectangle.NO_BORDER);
+//            logoCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
 
             // Add cells to header table
             headerTable.addCell(textCell);
-            headerTable.addCell(logoCell);
+//            headerTable.addCell(logoCell);
 
             // Add the header to the document
             document.add(Chunk.NEWLINE);
