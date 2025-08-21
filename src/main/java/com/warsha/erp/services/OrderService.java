@@ -21,15 +21,17 @@ public class OrderService {
     private final CustomerService customerService;
     private final ProductService productService;
     private final InvoiceService invoiceService;
+    private final PaymentService paymentService;
 
     @Autowired
     public OrderService(OrderRepository orderRepo,
                         CustomerService customerService,
-                        ProductService productService, InvoiceService invoiceService) {
+                        ProductService productService, InvoiceService invoiceService, PaymentService paymentService) {
         this.orderRepository = orderRepo;
         this.customerService = customerService;
         this.productService = productService;
         this.invoiceService = invoiceService;
+        this.paymentService = paymentService;
     }
 
     @Transactional
@@ -40,6 +42,11 @@ public class OrderService {
         order.setCustomer(customer);
         order.setOrderDate(LocalDate.now());
         order.setStatus("Pending");
+
+        order.setOrderSource(request.getOrderSource());
+        order.setDeliveryCharge(request.getDelivery());
+        order.setTotalPrice(request.calculateTotalPrice());
+        order.setDiscount(request.getDiscount());
 
         List<OrderItems> itemList = new ArrayList<>();
 
@@ -66,6 +73,15 @@ public class OrderService {
 
         invoiceService.generateInvoice(savedOrder.getId());
 
+        CreatePaymentRequest paymentRequest = new CreatePaymentRequest();
+
+        paymentRequest.setOrderId(savedOrder.getId());
+        paymentRequest.setAmountPaid(request.getItemsTotalPrice());
+        paymentRequest.setPaymentMethod(request.getPaymentMethod());
+        paymentRequest.setPaymentStatus("Completed");
+
+        paymentService.createPayment(paymentRequest);
+
         return savedOrder;
     }
 
@@ -73,10 +89,21 @@ public class OrderService {
         List<Order> orders = orderRepository.findAll();
 
         return orders.stream().map(order -> {
+            List<PaymentDto> paymentDtos = paymentService.getPaymentsByOrder(order.getId());
+
             OrderResponse dto = new OrderResponse();
+
             dto.setOrderId(order.getId());
+
+            dto.setPaymentMethod(paymentDtos.get(0).getPaymentMethod());
+
             dto.setOrderDate(order.getOrderDate());
             dto.setStatus(order.getStatus());
+
+            dto.setOrderSource(order.getOrderSource());
+            dto.setDiscount(order.getDiscount());
+            dto.setDelivery(order.getDeliveryCharge());
+            dto.setTotalPrice(order.getTotalPrice());
 
             // Map customer
             Customer customer = order.getCustomer();

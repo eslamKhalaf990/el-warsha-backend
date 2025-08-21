@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Setter
 public class PaymentDto {
     private Long id;
-    private BigDecimal amountPaid;
+    private Double amountPaid;
     private String paymentMethod;
     private String paymentStatus;
     private LocalDateTime paymentDate;

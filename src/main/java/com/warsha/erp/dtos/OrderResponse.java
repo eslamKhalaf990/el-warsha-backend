@@ -10,6 +10,13 @@ import java.util.List;
 public class OrderResponse {
     private Long orderId;
     private String status;
+
+    private double discount;
+    private double delivery;
+    private double totalPrice;
+    private String orderSource;
+    private String paymentMethod;
+
     private LocalDate orderDate;
     private CustomerDto customer;
     private List<OrderItemDto> orderItems;

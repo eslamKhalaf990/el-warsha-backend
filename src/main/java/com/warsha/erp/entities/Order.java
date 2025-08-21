@@ -26,6 +26,18 @@ public class Order {
     @Column(name= "Status", nullable = false)
     private String status;
 
+    @Column(name= "OrderSource", nullable = false)
+    private String OrderSource;
+
+    @Column(name= "Discount", nullable = false)
+    private Double Discount;
+
+    @Column(name= "TotalPrice", nullable = false)
+    private Double TotalPrice;
+
+    @Column(name= "DeliveryCharge", nullable = false)
+    private Double DeliveryCharge;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "CustomerID", nullable = false)
     private Customer customer;

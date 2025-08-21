@@ -120,27 +120,27 @@ public class InvoiceService {
             invoice.getOrder().getItems().forEach(item -> {
                 PdfPCell productCell = new PdfPCell(new Phrase(item.getProduct().getName(), normalFont));
                 productCell.setBorder(Rectangle.NO_BORDER);
-                productCell.setPaddingTop(8f);   // spacing between header and items
-                productCell.setPaddingBottom(6f);
+                productCell.setPaddingTop(4f);   // spacing between header and items
+                productCell.setPaddingBottom(3f);
 
                 PdfPCell quantityCell = new PdfPCell(new Phrase(String.valueOf(item.getQuantity()), normalFont));
                 quantityCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 quantityCell.setBorder(Rectangle.NO_BORDER);
-                quantityCell.setPaddingTop(8f);
-                quantityCell.setPaddingBottom(6f);
+                quantityCell.setPaddingTop(4f);
+                quantityCell.setPaddingBottom(3f);
 
                 PdfPCell priceCell = new PdfPCell(new Phrase(String.valueOf(item.getProduct().getSellingPrice()), normalFont));
                 priceCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 priceCell.setBorder(Rectangle.NO_BORDER);
-                priceCell.setPaddingTop(8f);
-                priceCell.setPaddingBottom(6f);
+                priceCell.setPaddingTop(4f);
+                priceCell.setPaddingBottom(3f);
 
                 PdfPCell totalCell = new PdfPCell(new Phrase(
                         String.valueOf(item.getQuantity() * item.getProduct().getSellingPrice()), normalFont));
                 totalCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 totalCell.setBorder(Rectangle.NO_BORDER);
-                totalCell.setPaddingTop(8f);
-                totalCell.setPaddingBottom(6f);
+                totalCell.setPaddingTop(4f);
+                totalCell.setPaddingBottom(3f);
 
                 table.addCell(productCell);
                 table.addCell(quantityCell);
