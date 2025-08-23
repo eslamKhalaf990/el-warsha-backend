@@ -76,7 +76,7 @@ public class OrderService {
         CreatePaymentRequest paymentRequest = new CreatePaymentRequest();
 
         paymentRequest.setOrderId(savedOrder.getId());
-        paymentRequest.setAmountPaid(request.getItemsTotalPrice());
+        paymentRequest.setAmountPaid(request.getDownPayment());
         paymentRequest.setPaymentMethod(request.getPaymentMethod());
         paymentRequest.setPaymentStatus("Completed");
 
