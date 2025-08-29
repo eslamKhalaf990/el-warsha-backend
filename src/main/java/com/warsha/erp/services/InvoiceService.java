@@ -7,14 +7,11 @@ import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.*;
 import com.warsha.erp.entities.Invoice;
 import com.warsha.erp.entities.Order;
+import com.warsha.erp.entities.OrderItems;
 import com.warsha.erp.repository.InvoiceRepository;
 import com.warsha.erp.repository.OrderRepository;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-
-import java.awt.*;
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -22,11 +19,13 @@ import java.util.stream.Stream;
 public class InvoiceService {
     final InvoiceRepository invoiceRepository;
     final OrderRepository orderRepository;
+    final PaymentService paymentService;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
-                          OrderRepository orderRepository) {
+                          OrderRepository orderRepository, PaymentService paymentService) {
         this.invoiceRepository = invoiceRepository;
         this.orderRepository = orderRepository;
+        this.paymentService = paymentService;
     }
 
     public Invoice generateInvoice(Long orderId) {
@@ -57,174 +56,202 @@ public class InvoiceService {
 
     public byte[] generateInvoicePdf(Invoice invoice) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            Document document = new Document(PageSize.A4, 36, 36, 36, 36); // add margins
-            PdfWriter.getInstance(document, baos);
+            Document document = createDocument(baos);
 
-            document.open();
-
-            // ===== Header Table (Text + Logo) =====
-            PdfPTable headerTable = new PdfPTable(2);
-            headerTable.setWidthPercentage(100);
-            headerTable.setWidths(new float[]{70, 30});
-
-            // Left Cell: Invoice Info
-            PdfPCell textCell = new PdfPCell();
-            textCell.setBorder(Rectangle.NO_BORDER);
-
-            Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
-            Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 12);
-
-            textCell.addElement(new Paragraph("Invoice #" + invoice.getId(),
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18)));
-            textCell.addElement(new Paragraph("Date: " + invoice.getIssuedDate().toString(), normalFont));
-            textCell.addElement(new Paragraph("Customer: " + invoice.getOrder().getCustomer().getFullName(), normalFont));
-            textCell.addElement(new Paragraph("Phone: " + invoice.getOrder().getCustomer().getPhone(), normalFont));
-            textCell.addElement(new Paragraph("Address: " + invoice.getOrder().getCustomer().getAddress(), normalFont));
-
-            // Logo (Right cell)
-            Image logo = Image.getInstance("https://drive.usercontent.google.com/download?id=10nH5QZg3EebwUmbXSB0P4A0xoNFmo2Lg&export=view&authuser=0");
-            logo.scaleToFit(100, 100);
-
-            PdfPCell logoCell = new PdfPCell(logo);
-            logoCell.setBorder(Rectangle.NO_BORDER);
-            logoCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            logoCell.setVerticalAlignment(Element.ALIGN_TOP);
-
-            headerTable.addCell(textCell);
-            headerTable.addCell(logoCell);
-
-            headerTable.setSpacingAfter(20f);
-            document.add(headerTable);
-
-            // ===== Items Table =====
-            PdfPTable table = new PdfPTable(4);
-            table.setWidthPercentage(100);
-            table.setSpacingBefore(10f);
-            table.setSpacingAfter(30f);
-            table.setWidths(new float[]{50, 15, 15, 20});
-
-            // Header row
-            Stream.of("Product", "Quantity", "Price", "Total").forEach(columnTitle -> {
-                PdfPCell header = new PdfPCell(new Phrase(columnTitle, boldFont));
-                header.setHorizontalAlignment(Element.ALIGN_LEFT); // left aligned
-                header.setPaddingBottom(30f);  // more bottom padding for spacing
-                header.setBorder(Rectangle.BOTTOM); // only bottom border
-                header.setBorderWidthBottom(0.7f);  // slightly thicker divider line
-                header.setBorderColorBottom(Color.GRAY);
-                table.addCell(header);
-            });
-
+            // Add sections
+            document.add(createHeader(invoice));
             document.add(Chunk.NEWLINE);
-
-            // Data rows (no borders)
-            invoice.getOrder().getItems().forEach(item -> {
-                PdfPCell productCell = new PdfPCell(new Phrase(item.getProduct().getName(), normalFont));
-                productCell.setBorder(Rectangle.NO_BORDER);
-                productCell.setPaddingTop(4f);   // spacing between header and items
-                productCell.setPaddingBottom(3f);
-
-                PdfPCell quantityCell = new PdfPCell(new Phrase(String.valueOf(item.getQuantity()), normalFont));
-                quantityCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                quantityCell.setBorder(Rectangle.NO_BORDER);
-                quantityCell.setPaddingTop(4f);
-                quantityCell.setPaddingBottom(3f);
-
-                PdfPCell priceCell = new PdfPCell(new Phrase(String.valueOf(item.getProduct().getSellingPrice()), normalFont));
-                priceCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                priceCell.setBorder(Rectangle.NO_BORDER);
-                priceCell.setPaddingTop(4f);
-                priceCell.setPaddingBottom(3f);
-
-                PdfPCell totalCell = new PdfPCell(new Phrase(
-                        String.valueOf(item.getQuantity() * item.getProduct().getSellingPrice()), normalFont));
-                totalCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                totalCell.setBorder(Rectangle.NO_BORDER);
-                totalCell.setPaddingTop(4f);
-                totalCell.setPaddingBottom(3f);
-
-                table.addCell(productCell);
-                table.addCell(quantityCell);
-                table.addCell(priceCell);
-                table.addCell(totalCell);
-            });
-
-            document.add(table);
-
-            // grand total
-            PdfPTable totalTable = new PdfPTable(2);
-            totalTable.setWidthPercentage(100);
-            totalTable.setWidths(new float[]{80, 20});
-
-            PdfPCell empty = new PdfPCell(new Phrase(""));
-            empty.setBorder(Rectangle.NO_BORDER);
-
-            PdfPCell totalCell = new PdfPCell(new Phrase("Grand Total: 1500 EGP", boldFont));
-            totalCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            totalCell.setBorder(Rectangle.TOP);
-            totalCell.setPadding(8f);
-
-            totalTable.addCell(empty);
-            totalTable.addCell(totalCell);
-
-            // ===== Footer Section =====
+            document.add(createItemsTable(invoice));
+            document.add(createTotalTable(invoice));
             document.add(Chunk.NEWLINE);
-            document.add(Chunk.NEWLINE);
+            document.add(createFooter(invoice));
 
-            // Thank you message
-            Paragraph thankYou = new Paragraph("Thank you for your business!",
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12));
-            thankYou.setAlignment(Element.ALIGN_CENTER);
-            document.add(thankYou);
-
-            document.add(Chunk.NEWLINE);
-
-            // Delivery & Down Payment
-            PdfPTable footerTable = new PdfPTable(2);
-            footerTable.setWidthPercentage(100);
-            footerTable.setWidths(new float[]{70, 30});
-
-            // Left: Notes
-            PdfPCell notesCell = new PdfPCell();
-            notesCell.setBorder(Rectangle.NO_BORDER);
-            notesCell.addElement(new Paragraph("Delivery Charge: 50 EGP", normalFont));
-            notesCell.addElement(new Paragraph("Down Payment: 200 EGP", normalFont));
-            footerTable.addCell(notesCell);
-
-            // Right: Empty (for spacing)
-            PdfPCell emptyRight = new PdfPCell(new Phrase(""));
-            emptyRight.setBorder(Rectangle.NO_BORDER);
-            footerTable.addCell(emptyRight);
-
-            document.add(footerTable);
-
-            // Terms & Conditions
-            Paragraph terms = new Paragraph(
-                    "Terms & Conditions:\n- No return policy after 30 days.",
-                    FontFactory.getFont(FontFactory.HELVETICA, 10));
-            terms.setAlignment(Element.ALIGN_LEFT);
-
-
-            document.add(totalTable);
-            document.add(Chunk.NEWLINE);
-            document.add(Chunk.NEWLINE);
-
-            document.add(terms);
             document.close();
-
             return baos.toByteArray();
         } catch (Exception e) {
             throw new RuntimeException("Error generating PDF", e);
         }
     }
-}
 
-class BackgroundEvent extends PdfPageEventHelper {
-    @Override
-    public void onEndPage(PdfWriter writer, com.lowagie.text.Document document) {
-        PdfContentByte canvas = writer.getDirectContentUnder();
-        Rectangle rect = document.getPageSize();
-        canvas.setColorFill(new Color(240, 240, 240)); // light grey
-        canvas.rectangle(rect.getLeft(), rect.getBottom(), rect.getWidth(), rect.getHeight());
-        canvas.fill();
+    // ====== Helpers ======
+    private Document createDocument(ByteArrayOutputStream baos) throws DocumentException {
+        Document document = new Document(PageSize.A4, 36, 36, 36, 36);
+        PdfWriter.getInstance(document, baos);
+        document.open();
+        return document;
+    }
+
+    private PdfPTable createHeader(Invoice invoice) throws Exception {
+        Font normalFont = FontFactory.getFont(FontFactory.TIMES_BOLDITALIC, 12);
+
+        PdfPTable headerTable = new PdfPTable(1);
+        headerTable.setWidthPercentage(100);
+
+        // Left Cell: Invoice Info
+        PdfPCell textCell = new PdfPCell();
+        textCell.setBorder(Rectangle.NO_BORDER);
+        Paragraph invoiceNumber = new Paragraph("Invoice #" + invoice.getId(),
+                FontFactory.getFont(FontFactory.TIMES_BOLDITALIC, 20));
+        invoiceNumber.setAlignment(Element.ALIGN_CENTER);
+        textCell.addElement(invoiceNumber);
+
+        Paragraph issuedDate = new Paragraph("Issued Date: " + invoice.getIssuedDate(), normalFont);
+        issuedDate.setAlignment(Element.ALIGN_CENTER);
+        textCell.addElement(issuedDate);
+
+        // Right Cell: Logo
+        Image logo = Image.getInstance("https://drive.usercontent.google.com/download?id=10nH5QZg3EebwUmbXSB0P4A0xoNFmo2Lg&export=view&authuser=0");
+        logo.scaleToFit(100, 100);
+        PdfPCell logoCell = new PdfPCell(logo);
+        logoCell.setBorder(Rectangle.NO_BORDER);
+        logoCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+
+        headerTable.addCell(logoCell);
+        headerTable.setSpacingAfter(30f);
+        headerTable.addCell(textCell);
+
+        headerTable.setSpacingAfter(20f);
+        return headerTable;
+    }
+
+    private PdfPTable createItemsTable(Invoice invoice) throws DocumentException {
+        Font boldFont = FontFactory.getFont(FontFactory.TIMES_BOLDITALIC, 12);
+        Font normalFont = FontFactory.getFont(FontFactory.TIMES_ITALIC, 12);
+
+        PdfPTable table = new PdfPTable(4);
+        table.setWidthPercentage(100);
+        table.setWidths(new float[]{50, 15, 15, 20});
+
+        Stream.of("Product", "Quantity", "Price", "Total").forEach(col -> {
+            PdfPCell header = new PdfPCell(new Phrase(col, boldFont));
+            header.setBorder(Rectangle.BOTTOM);
+            if (col.equals("Product")) header.setHorizontalAlignment(Element.ALIGN_LEFT);
+            else header.setHorizontalAlignment(Element.ALIGN_RIGHT);
+
+            header.setBorderWidthBottom(0.7f);
+
+            // Add spacing above and below the border
+            header.setPaddingTop(8f);
+            header.setPaddingBottom(20f);
+
+            table.addCell(header);
+        });
+
+        // Data Rows
+        List<OrderItems> items = invoice.getOrder().getItems();
+
+        for (int i = 0; i < items.size(); i++) {
+            OrderItems item = items.get(i);
+
+            PdfPCell productCell = createCell(item.getProduct().getName(), normalFont, Element.ALIGN_LEFT);
+            PdfPCell qtyCell = createCell(String.valueOf(item.getQuantity()), normalFont, Element.ALIGN_RIGHT);
+            PdfPCell priceCell = createCell(item.getProduct().getSellingPrice() + " EGP", normalFont, Element.ALIGN_RIGHT);
+            PdfPCell totalCell = createCell((item.getQuantity() * item.getProduct().getSellingPrice()) + " EGP", normalFont, Element.ALIGN_RIGHT);
+
+            // Add spacing only for the first row (to push it away from the header line)
+            if (i == 0) {
+                productCell.setPaddingTop(20f);
+                qtyCell.setPaddingTop(20f);
+                priceCell.setPaddingTop(20f);
+                totalCell.setPaddingTop(20f);
+            }
+
+            table.addCell(productCell);
+            table.addCell(qtyCell);
+            table.addCell(priceCell);
+            table.addCell(totalCell);
+        }
+
+
+        return table;
+    }
+
+    private PdfPCell createCell(String text, Font font, int alignment) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setBorder(Rectangle.NO_BORDER);
+        cell.setHorizontalAlignment(alignment);
+        cell.setPaddingTop(4f);
+        cell.setPaddingBottom(3f);
+        return cell;
+    }
+
+    private PdfPTable createTotalTable(Invoice invoice) throws DocumentException {
+        Font smallBoldFont = FontFactory.getFont(FontFactory.TIMES_BOLDITALIC, 12);
+
+        // 2-column table
+        PdfPTable totalTable = new PdfPTable(2);
+        totalTable.setWidthPercentage(100);
+        totalTable.setWidths(new float[]{2f, 1.5f});
+        totalTable.setSpacingBefore(10f);
+
+        // ========== LEFT COLUMN ==========
+        PdfPCell leftCell = new PdfPCell();
+        leftCell.setBorder(Rectangle.NO_BORDER);
+        leftCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+        leftCell.setPaddingTop(16f); // spacer above
+
+        leftCell.addElement(new Paragraph("Total Price: " + invoice.getOrder().getTotalPrice() + " EGP", smallBoldFont));
+        leftCell.addElement(new Paragraph("Delivery Charge: " + invoice.getOrder().getDeliveryCharge() + " EGP", smallBoldFont));
+        leftCell.addElement(new Paragraph("Discount: " + invoice.getOrder().getDiscount() + " EGP", smallBoldFont));
+        leftCell.addElement(new Paragraph("Amount Paid: " + paymentService.getPaymentsByOrder(invoice.getOrder().getId()).get(0).getAmountPaid() + " EGP", smallBoldFont));
+
+        // ========== RIGHT COLUMN ==========
+        PdfPCell rightCell = new PdfPCell();
+        rightCell.setBorder(Rectangle.NO_BORDER);
+        rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        rightCell.setPaddingTop(16f); // spacer above
+
+        Paragraph shippingTo = new Paragraph("Shipping To: " + invoice.getOrder().getCustomer().getFullName(), smallBoldFont);
+        shippingTo.setAlignment(Element.ALIGN_RIGHT);
+        rightCell.addElement(shippingTo);
+
+        Paragraph phone = new Paragraph("Phone: " + invoice.getOrder().getCustomer().getPhone(), smallBoldFont);
+        phone.setAlignment(Element.ALIGN_RIGHT);
+        rightCell.addElement(phone);
+
+        Paragraph address = new Paragraph("Address: " + invoice.getOrder().getCustomer().getAddress(), smallBoldFont);
+        address.setAlignment(Element.ALIGN_RIGHT);
+        rightCell.addElement(address);
+
+        // Add cells to table (one row, two columns)
+        totalTable.addCell(leftCell);
+        totalTable.addCell(rightCell);
+
+        return totalTable;
+    }
+
+    private Element createFooter(Invoice invoice) throws DocumentException {
+
+        // Fonts
+        Font italicBoldFont = FontFactory.getFont(FontFactory.TIMES_BOLDITALIC, 12); // bold + italic
+        Font italicFont = FontFactory.getFont(FontFactory.TIMES_ITALIC, 10); // italic
+
+        // One column table (full width)
+        PdfPTable footerTable = new PdfPTable(1);
+        footerTable.setWidthPercentage(100);
+        footerTable.setHorizontalAlignment(Element.ALIGN_CENTER);
+
+        // Spacer (empty row above footer content)
+        PdfPCell spacer = new PdfPCell(new Phrase(" "));
+        spacer.setBorder(Rectangle.NO_BORDER);
+        spacer.setFixedHeight(30f); // adjust for more/less space
+        footerTable.addCell(spacer);
+
+        // Thank you + Terms cell
+        PdfPCell footerCell = new PdfPCell();
+        footerCell.setBorder(Rectangle.NO_BORDER);
+        footerCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+
+        Paragraph thankYou = new Paragraph("Thank you for your order!", italicBoldFont);
+        thankYou.setAlignment(Element.ALIGN_CENTER);
+        footerCell.addElement(thankYou);
+
+        Paragraph terms = new Paragraph("Terms and Conditions\nThere is no return policy.", italicFont);
+        terms.setAlignment(Element.ALIGN_CENTER);
+        footerCell.addElement(terms);
+
+        footerTable.addCell(footerCell);
+
+        return footerTable;
     }
 }

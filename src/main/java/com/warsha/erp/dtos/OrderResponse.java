@@ -14,6 +14,7 @@ public class OrderResponse {
     private double discount;
     private double delivery;
     private double totalPrice;
+    private double downPayment;
     private String orderSource;
     private String paymentMethod;
 

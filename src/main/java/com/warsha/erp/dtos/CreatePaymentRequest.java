@@ -12,5 +12,4 @@ public class CreatePaymentRequest {
     private Double amountPaid;
     private String paymentMethod;
     private String paymentStatus;
-
 }

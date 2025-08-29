@@ -63,6 +63,12 @@ public class OrderService {
                 item.setUnitPrice(itemReq.getUnitPrice());
 
             item.setQuantity(itemReq.getQuantity());
+            int oldValue = Integer.parseInt(product.getQuantity());
+            int newValue = itemReq.getQuantity();
+
+            product.setQuantity(String.valueOf((oldValue - newValue)));
+
+            productService.updateProduct(itemReq.getProductId(), product);
 
             itemList.add(item);
         }
@@ -101,6 +107,7 @@ public class OrderService {
             dto.setStatus(order.getStatus());
 
             dto.setOrderSource(order.getOrderSource());
+            dto.setDownPayment(paymentDtos.get(0).getAmountPaid());
             dto.setDiscount(order.getDiscount());
             dto.setDelivery(order.getDeliveryCharge());
             dto.setTotalPrice(order.getTotalPrice());

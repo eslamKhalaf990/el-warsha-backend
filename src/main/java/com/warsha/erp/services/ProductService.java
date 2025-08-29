@@ -10,11 +10,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.MalformedURLException;
 import java.util.UUID;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
+
+
 
 @Service
 public class ProductService {
@@ -43,30 +44,29 @@ public class ProductService {
     }
 
     public Product createProduct(Product product, MultipartFile image) {
-        // Step 1: Generate UUID SKU before saving
-        String generatedSku = "SKU-" + UUID.randomUUID();
-        product.setSku(generatedSku);
         product.setCreatedAt(LocalDateTime.now());
 
         // Step 2: Save product (now SKU is not null and unique)
         Product savedProduct = productRepository.save(product);
 
-        // Step 3: Save product image
-        if (image != null && !image.isEmpty()) {
-            String uploadDir = "uploads/";
-            try {
-                Files.createDirectories(Paths.get(uploadDir));
-                String fileName = generatedSku + "_" + image.getOriginalFilename();
-                Path filePath = Paths.get(uploadDir, fileName);
-                Files.write(filePath, image.getBytes());
+        GoogleDriveService googleDriveService = new GoogleDriveService();
 
-                savedProduct.setImageUrl(filePath.toString());
+        if (image != null && !image.isEmpty()) {
+            try {
+                // Upload to Google Drive instead of local storage
+                String imageUrl = googleDriveService.uploadFile(image);
+
+                // Save the Drive public link in DB
+                savedProduct.setImageUrl(imageUrl);
                 productRepository.save(savedProduct);
 
             } catch (IOException e) {
-                throw new RuntimeException("Failed to save image", e);
+                throw new RuntimeException("Failed to save image to Google Drive", e);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
+
 
         return savedProduct;
     }
@@ -79,7 +79,6 @@ public class ProductService {
         existing.setSellingPrice(updatedProduct.getSellingPrice());
         existing.setQuantity(updatedProduct.getQuantity());
         existing.setCategory(updatedProduct.getCategory());
-        existing.setSku(updatedProduct.getSku());
         existing.setUpdatedAt(LocalDateTime.now());
         return productRepository.save(existing);
     }
@@ -92,3 +91,4 @@ public class ProductService {
         productRepository.deleteAll();
     }
 }
+

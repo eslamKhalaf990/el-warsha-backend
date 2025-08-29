@@ -35,7 +35,7 @@ public class Product {
     @Column(name = "ImageUrl")
     private String ImageUrl;
 
-    @Column(name = "Sku")
+    @Column(name = "SKU", insertable = false, updatable = false)
     private String Sku;
 
     @Column(name = "Quantity")
