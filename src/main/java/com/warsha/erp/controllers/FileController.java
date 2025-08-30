@@ -2,6 +2,7 @@ package com.warsha.erp.controllers;
 
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
+import com.warsha.erp.services.GoogleDriveService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -10,20 +11,22 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.io.ByteArrayOutputStream;
-
-import static com.warsha.erp.services.GoogleDriveService.getDriveService;
 
 @RestController
 @RequestMapping("/api/files")
 public class FileController {
 
+    private final GoogleDriveService googleDriveService;
+
+    public FileController(GoogleDriveService googleDriveService) {
+        this.googleDriveService = googleDriveService;
+    }
+
     @GetMapping("/{fileId}")
     public ResponseEntity<byte[]> getFile(@PathVariable String fileId) throws Exception {
-        Drive driveService = getDriveService();
+        Drive driveService = googleDriveService.getDriveService();
 
-        // Get file metadata (to detect MIME type)
         File file = driveService.files().get(fileId)
                 .setFields("mimeType, name")
                 .execute();

@@ -1,108 +1,91 @@
 package com.warsha.erp.services;
 
-import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
-import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.Permission;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
-import java.security.GeneralSecurityException;
+import java.io.BufferedInputStream;
 import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 
 @Service
 public class GoogleDriveService {
 
-    private static final String APPLICATION_NAME = "MyApp";
     private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
-    private static final String TOKENS_DIRECTORY_PATH = "tokens"; // Stores access & refresh tokens
 
-    // Path to OAuth2 client_secret.json (downloaded from Google Cloud Console)
-    private static final String CREDENTIALS_FILE_PATH = "src/main/resources/client_secret_881242863381-rubnpv9csakd68e5hgt30bll7om5fbde.apps.googleusercontent.com.json";
+    @Value("${google.client.id}")
+    private String clientId;
 
-    /**
-     * Creates an authorized Credential object using OAuth2.
-     */
-    private static com.google.api.client.auth.oauth2.Credential getCredentials() throws IOException, GeneralSecurityException {
-        // Load client_secret.json from resources
-        InputStream in = GoogleDriveService.class.getClassLoader()
-                .getResourceAsStream("client_secret_881242863381-rubnpv9csakd68e5hgt30bll7om5fbde.apps.googleusercontent.com.json");
+    @Value("${google.client.secret}")
+    private String clientSecret;
 
-        if (in == null) {
-            throw new RuntimeException("Google client secret file not found in resources!");
+    @Value("${google.refresh.token}")
+    private  String refreshToken;
+
+    @Value("${google.application.name:WarshaBackend}")
+    private String applicationName;
+
+    @Value("${google.drive.folder.id}")
+    private String folderId;
+
+    private Credential getCredentials() throws Exception {
+
+        if (clientId == null || clientSecret == null || refreshToken == null) {
+            throw new IllegalStateException("Google OAuth properties are not set!");
         }
 
-        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
-
-        List<String> scopes = Collections.singletonList(DriveScopes.DRIVE_FILE);
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                GoogleNetHttpTransport.newTrustedTransport(),
-                JSON_FACTORY,
-                clientSecrets,
-                scopes)
-                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
-                .setAccessType("offline")
-                .build();
-
-        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
-        return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
+        return new GoogleCredential.Builder()
+                .setTransport(GoogleNetHttpTransport.newTrustedTransport())
+                .setJsonFactory(JSON_FACTORY)
+                .setClientSecrets(clientId, clientSecret)
+                .build()
+                .setRefreshToken(refreshToken);
     }
 
-
-    /**
-     * Build Drive service using OAuth credentials.
-     */
-    public static Drive getDriveService() throws Exception {
+    public Drive getDriveService() throws Exception {
         return new Drive.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
                 JSON_FACTORY,
                 getCredentials()
-        ).setApplicationName(APPLICATION_NAME).build();
+        ).setApplicationName(applicationName).build();
     }
 
-    /**
-     * Uploads a file to Google Drive (to personal account using OAuth).
-     */
     public String uploadFile(MultipartFile multipartFile) throws Exception {
         Drive driveService = getDriveService();
-        String folderId = "1PCfi0vdmcArMoXKRjgNL4lPNq3WnnSkL";
 
-        // File metadata
+        // Metadata
         File fileMetadata = new File();
-        fileMetadata.setName(String.valueOf(UUID.randomUUID()));
+        fileMetadata.setName(UUID.randomUUID().toString());
         fileMetadata.setParents(Collections.singletonList(folderId));
 
-        // File content
+        // Content
         InputStreamContent mediaContent = new InputStreamContent(
                 multipartFile.getContentType(),
                 new BufferedInputStream(multipartFile.getInputStream())
         );
         mediaContent.setLength(multipartFile.getSize());
 
+        // Upload
         File uploadedFile = driveService.files()
-                .create(fileMetadata,
-                        new InputStreamContent(multipartFile.getContentType(),
-                                multipartFile.getInputStream()))
+                .create(fileMetadata, mediaContent)
                 .setFields("id")
                 .execute();
 
-        // Make file publicly viewable
+        // Make it public
         driveService.permissions().create(uploadedFile.getId(),
                         new Permission().setType("anyone").setRole("reader"))
                 .execute();
-        // Return public preview link
+
         return "https://drive.google.com/uc?export=view&id=" + uploadedFile.getId();
     }
 }

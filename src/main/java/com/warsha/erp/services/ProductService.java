@@ -21,7 +21,14 @@ import java.util.List;
 public class ProductService {
 
     @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
+    private final GoogleDriveService googleDriveService;
+
+    public ProductService(ProductRepository productRepository, GoogleDriveService googleDriveService) {
+        this.productRepository = productRepository;
+        this.googleDriveService = googleDriveService;
+    }
+
 
     public List<Product> getAllProducts() {
         return productRepository.findAll();
@@ -49,7 +56,7 @@ public class ProductService {
         // Step 2: Save product (now SKU is not null and unique)
         Product savedProduct = productRepository.save(product);
 
-        GoogleDriveService googleDriveService = new GoogleDriveService();
+//        GoogleDriveService googleDriveService = new GoogleDriveService();
 
         if (image != null && !image.isEmpty()) {
             try {
