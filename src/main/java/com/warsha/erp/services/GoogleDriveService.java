@@ -36,22 +36,30 @@ public class GoogleDriveService {
      * Creates an authorized Credential object using OAuth2.
      */
     private static com.google.api.client.auth.oauth2.Credential getCredentials() throws IOException, GeneralSecurityException {
-        InputStream in = new FileInputStream(CREDENTIALS_FILE_PATH);
+        // Load client_secret.json from resources
+        InputStream in = GoogleDriveService.class.getClassLoader()
+                .getResourceAsStream("client_secret_881242863381-rubnpv9csakd68e5hgt30bll7om5fbde.apps.googleusercontent.com.json");
+
+        if (in == null) {
+            throw new RuntimeException("Google client secret file not found in resources!");
+        }
 
         GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
 
-        // Build flow with offline access to refresh tokens automatically
         List<String> scopes = Collections.singletonList(DriveScopes.DRIVE_FILE);
         GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, clientSecrets, scopes)
+                GoogleNetHttpTransport.newTrustedTransport(),
+                JSON_FACTORY,
+                clientSecrets,
+                scopes)
                 .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
                 .setAccessType("offline")
                 .build();
 
-        // Triggers browser-based authentication only first time
         LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
         return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
     }
+
 
     /**
      * Build Drive service using OAuth credentials.
