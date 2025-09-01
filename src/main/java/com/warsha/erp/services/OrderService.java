@@ -7,6 +7,7 @@ import com.warsha.erp.entities.OrderItems;
 import com.warsha.erp.entities.Product;
 import com.warsha.erp.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
@@ -92,7 +93,7 @@ public class OrderService {
     }
 
     public List<OrderResponse> getAllOrders() {
-        List<Order> orders = orderRepository.findAll();
+        List<Order> orders = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
 
         return orders.stream().map(order -> {
             List<PaymentDto> paymentDtos = paymentService.getPaymentsByOrder(order.getId());
