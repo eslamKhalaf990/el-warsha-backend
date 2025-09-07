@@ -48,4 +48,12 @@ public class PaymentService {
                 .map(PaymentDto::new)
                 .collect(Collectors.toList());
     }
+
+    public void deletePaymentsByOrderId(Long orderId) {
+        List<Payment> payments = paymentRepo.findByOrderId(orderId);
+
+        if (payments != null && !payments.isEmpty()) {
+            paymentRepo.deleteAll(payments);
+        }
+    }
 }

@@ -1,10 +1,7 @@
 package com.warsha.erp.services;
 
 import com.warsha.erp.dtos.*;
-import com.warsha.erp.entities.Customer;
-import com.warsha.erp.entities.Order;
-import com.warsha.erp.entities.OrderItems;
-import com.warsha.erp.entities.Product;
+import com.warsha.erp.entities.*;
 import com.warsha.erp.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -92,6 +89,60 @@ public class OrderService {
         return savedOrder;
     }
 
+    @Transactional
+    public Order updateOrder(Long orderId, CreateOrderRequest request) {
+        // 1. Fetch existing order
+        Order existingOrder = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // 2. Update basic order info
+        existingOrder.setOrderSource(request.getOrderSource());
+        existingOrder.setDeliveryCharge(request.getDelivery());
+        existingOrder.setDiscount(request.getDiscount());
+        existingOrder.setTotalPrice(request.calculateTotalPrice());
+        existingOrder.setStatus("Updated");
+
+        // 3. Revert previous product quantities
+        for (OrderItems item : existingOrder.getItems()) {
+            Product product = item.getProduct();
+            int restoredQty = Integer.parseInt(product.getQuantity()) + item.getQuantity();
+            product.setQuantity(String.valueOf(restoredQty));
+            productService.updateProduct(product.getProductID(), product);
+        }
+
+        // 4. Update existing items safely
+        existingOrder.getItems().clear(); // clear the collection but keep the reference
+
+        for (OrderItemRequest itemReq : request.getItems()) {
+            Product product = productService.getProductById(itemReq.getProductId());
+
+            // Deduct new quantities
+            int oldValue = Integer.parseInt(product.getQuantity());
+            int newValue = itemReq.getQuantity();
+            if (oldValue < newValue) {
+                throw new RuntimeException("Insufficient stock for product: " + product.getName());
+            }
+            product.setQuantity(String.valueOf(oldValue - newValue));
+            productService.updateProduct(product.getProductID(), product);
+
+            // Create new order item and add to existing collection
+            OrderItems item = new OrderItems();
+            item.setOrder(existingOrder); // maintain bidirectional link
+            item.setProduct(product);
+            item.setQuantity(newValue);
+            item.setUnitPrice(itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : product.getSellingPrice());
+
+            existingOrder.getItems().add(item); // add to the same collection
+        }
+
+
+        // 6. Optionally handle invoice and payment updates here
+        // invoiceService.generateInvoice(savedOrder.getId());
+        // paymentService.updatePayment(...)
+
+        return orderRepository.save(existingOrder);
+    }
+
     public List<OrderResponse> getAllOrders() {
         List<Order> orders = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
 
@@ -137,4 +188,31 @@ public class OrderService {
             return dto;
         }).collect(Collectors.toList());
     }
+
+    @Transactional
+    public void deleteOrder(Long orderId) {
+        // 1. Fetch order
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // 2. Restock products
+        for (OrderItems item : order.getItems()) {
+            Product product = item.getProduct();
+            int currentStock = Integer.parseInt(product.getQuantity());
+            int restoredQty = currentStock + item.getQuantity();
+            product.setQuantity(String.valueOf(restoredQty));
+
+            productService.updateProduct(product.getProductID(), product);
+        }
+
+        // 3. Delete related payments
+        paymentService.deletePaymentsByOrderId(orderId);
+
+        // 4. Delete related invoice
+        invoiceService.deleteInvoiceByOrderId(orderId);
+
+        // 5. Finally, delete the order
+        orderRepository.delete(order);
+    }
+
 }

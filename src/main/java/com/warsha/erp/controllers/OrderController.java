@@ -28,8 +28,20 @@ public class OrderController {
         return ResponseEntity.ok(newOrder);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<OrderResponse> updateOrder(@PathVariable Long id, @RequestBody CreateOrderRequest request) {
+        Order updatedOrder = orderService.updateOrder(id, request);
+        return ResponseEntity.ok(OrderResponse.fromEntity(updatedOrder));
+    }
+
     @GetMapping
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
         return ResponseEntity.ok(orderService.getAllOrders());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
+        orderService.deleteOrder(id);
+        return ResponseEntity.noContent().build(); // 204 No Content
     }
 }

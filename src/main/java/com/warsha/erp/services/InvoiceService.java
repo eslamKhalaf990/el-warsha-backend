@@ -50,6 +50,13 @@ public class InvoiceService {
                 .orElseThrow(() -> new RuntimeException("Invoice not found"));
     }
 
+    public void deleteInvoiceByOrderId(Long orderId) {
+        Invoice invoice = invoiceRepository.findByOrderId(orderId);
+        if (invoice != null) {
+            invoiceRepository.delete(invoice);
+        }
+    }
+
     public List<Invoice> getAllInvoices() {
         return invoiceRepository.findAll();
     }
@@ -81,38 +88,6 @@ public class InvoiceService {
         return document;
     }
 
-//    private PdfPTable createHeader(Invoice invoice) throws Exception {
-//        Font normalFont = FontFactory.getFont(FontFactory.TIMES_BOLDITALIC, 12);
-//
-//        PdfPTable headerTable = new PdfPTable(1);
-//        headerTable.setWidthPercentage(100);
-//
-//        // Left Cell: Invoice Info
-//        PdfPCell textCell = new PdfPCell();
-//        textCell.setBorder(Rectangle.NO_BORDER);
-//        Paragraph invoiceNumber = new Paragraph("Invoice #" + invoice.getId(),
-//                FontFactory.getFont(FontFactory.TIMES_BOLDITALIC, 20));
-//        invoiceNumber.setAlignment(Element.ALIGN_CENTER);
-//        textCell.addElement(invoiceNumber);
-//
-//        Paragraph issuedDate = new Paragraph("Issued Date: " + invoice.getIssuedDate(), normalFont);
-//        issuedDate.setAlignment(Element.ALIGN_CENTER);
-//        textCell.addElement(issuedDate);
-//
-//        // Right Cell: Logo
-//        Image logo = Image.getInstance("https://drive.usercontent.google.com/download?id=10nH5QZg3EebwUmbXSB0P4A0xoNFmo2Lg&export=view&authuser=0");
-//        logo.scaleToFit(100, 100);
-//        PdfPCell logoCell = new PdfPCell(logo);
-//        logoCell.setBorder(Rectangle.NO_BORDER);
-//        logoCell.setHorizontalAlignment(Element.ALIGN_CENTER);
-//
-//        headerTable.addCell(logoCell);
-//        headerTable.setSpacingAfter(30f);
-//        headerTable.addCell(textCell);
-//
-//        headerTable.setSpacingAfter(20f);
-//        return headerTable;
-//    }
     private PdfPTable createHeader(Invoice invoice) throws Exception {
         // Load Arabic-supported font
         BaseFont bf = BaseFont.createFont("fonts/NotoKufiArabic-Regular.ttf",
