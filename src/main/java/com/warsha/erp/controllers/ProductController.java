@@ -70,9 +70,15 @@ public class ProductController {
         return new ResponseEntity<>(productService.createProduct(product, image), HttpStatus.CREATED);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Product> update(@PathVariable Long id, @RequestBody Product product) {
-        return ResponseEntity.ok(productService.updateProduct(id, product));
+    @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public Product updateProduct(
+            @PathVariable Long id,
+            @RequestPart("product") String product,
+            @RequestPart(value = "image", required = false) MultipartFile image) throws JsonProcessingException {
+
+        Product productConverted = new ObjectMapper().readValue(product, Product.class);
+
+        return productService.updateProductWithImage(id, productConverted, image);
     }
 
     @DeleteMapping("/{id}")

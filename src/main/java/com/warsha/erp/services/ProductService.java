@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.MalformedURLException;
-import java.util.UUID;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -78,7 +77,7 @@ public class ProductService {
         return savedProduct;
     }
 
-    public Product updateProduct(Long id, Product updatedProduct) {
+    public void updateProduct(Long id, Product updatedProduct) {
         Product existing = getProductById(id);
         existing.setName(updatedProduct.getName());
         existing.setDescription(updatedProduct.getDescription());
@@ -87,6 +86,32 @@ public class ProductService {
         existing.setQuantity(updatedProduct.getQuantity());
         existing.setCategory(updatedProduct.getCategory());
         existing.setUpdatedAt(LocalDateTime.now());
+        productRepository.save(existing);
+    }
+
+    public Product updateProductWithImage(Long id, Product updatedProduct, MultipartFile image) {
+        Product existing = getProductById(id);
+
+        existing.setName(updatedProduct.getName());
+        existing.setDescription(updatedProduct.getDescription());
+        existing.setBuyingPrice(updatedProduct.getBuyingPrice());
+        existing.setSellingPrice(updatedProduct.getSellingPrice());
+        existing.setQuantity(updatedProduct.getQuantity());
+        existing.setCategory(updatedProduct.getCategory());
+        existing.setUpdatedAt(LocalDateTime.now());
+
+        if (image != null && !image.isEmpty()) {
+            try {
+                // Upload to Google Drive
+                String imageUrl = googleDriveService.uploadFile(image);
+                existing.setImageUrl(imageUrl);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to save image to Google Drive", e);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         return productRepository.save(existing);
     }
 
