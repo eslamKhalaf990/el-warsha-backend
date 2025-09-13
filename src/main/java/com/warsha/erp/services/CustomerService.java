@@ -3,6 +3,7 @@ package com.warsha.erp.services;
 import com.warsha.erp.entities.Customer;
 import com.warsha.erp.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -15,7 +16,7 @@ public class CustomerService {
     private CustomerRepository customerRepository;
 
     public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
+        return customerRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
     }
 
     public Customer getCustomerByID(Long id) {
