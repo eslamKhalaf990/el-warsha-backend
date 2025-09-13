@@ -60,6 +60,11 @@ public class GoogleDriveService {
         ).setApplicationName(applicationName).build();
     }
 
+    public void deleteFile(String fileId) throws Exception {
+        Drive driveService = getDriveService();
+        driveService.files().delete(fileId).execute();
+    }
+
     public String uploadFile(MultipartFile multipartFile) throws Exception {
         Drive driveService = getDriveService();
 

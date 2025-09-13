@@ -1,6 +1,7 @@
 package com.warsha.erp.services;
 import com.warsha.erp.entities.Product;
 import com.warsha.erp.repository.ProductRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -9,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.net.MalformedURLException;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -30,7 +32,7 @@ public class ProductService {
 
 
     public List<Product> getAllProducts() {
-        return productRepository.findAll();
+        return productRepository.findAllNotDeleted();
     }
 
     public Product getProductById(Long id) {
@@ -52,10 +54,7 @@ public class ProductService {
     public Product createProduct(Product product, MultipartFile image) {
         product.setCreatedAt(LocalDateTime.now());
 
-        // Step 2: Save product (now SKU is not null and unique)
         Product savedProduct = productRepository.save(product);
-
-//        GoogleDriveService googleDriveService = new GoogleDriveService();
 
         if (image != null && !image.isEmpty()) {
             try {
@@ -116,7 +115,42 @@ public class ProductService {
     }
 
     public void deleteProduct(Long id) {
-        productRepository.deleteById(id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Product not found with id " + id));
+
+        // If product has an image, delete it from Google Drive
+        if (product.getImageUrl() != null) {
+            try {
+                String fileId = extractFileId(product.getImageUrl());
+                if (fileId != null) {
+                    googleDriveService.deleteFile(fileId);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to delete image from Google Drive", e);
+            }
+        }
+
+        // Soft delete: mark as deleted
+        product.setDeleted("true");
+        product.setUpdatedAt(LocalDateTime.now());
+        product.setDeletedAt(LocalDateTime.now());
+        productRepository.save(product);
+    }
+
+    private String extractFileId(String imageUrl) {
+        try {
+            URI uri = new URI(imageUrl);
+            String query = uri.getQuery(); // export=view&id=ABC123XYZ
+            for (String param : query.split("&")) {
+                String[] pair = param.split("=");
+                if (pair.length == 2 && pair[0].equals("id")) {
+                    return pair[1];
+                }
+            }
+        } catch (Exception e) {
+            // log error
+        }
+        return null;
     }
 
     public void deleteAll() {
