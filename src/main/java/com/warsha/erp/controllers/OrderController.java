@@ -2,17 +2,17 @@ package com.warsha.erp.controllers;
 
 import com.warsha.erp.dtos.CreateOrderRequest;
 import com.warsha.erp.dtos.OrderResponse;
+import com.warsha.erp.dtos.UpdateOrderStatus;
 import com.warsha.erp.entities.Order;
 import com.warsha.erp.services.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
 @RequestMapping("/orders")
-@CrossOrigin // optional: allows cross-origin requests (good for Flutter)
+@CrossOrigin
 public class OrderController {
 
     private final OrderService orderService;
@@ -31,6 +31,15 @@ public class OrderController {
     @PutMapping("/{id}")
     public ResponseEntity<OrderResponse> updateOrder(@PathVariable Long id, @RequestBody CreateOrderRequest request) {
         Order updatedOrder = orderService.updateOrder(id, request);
+        return ResponseEntity.ok(OrderResponse.fromEntity(updatedOrder));
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<OrderResponse> updateOrderStatus(
+            @PathVariable Long id,
+            @RequestBody UpdateOrderStatus request) {
+
+        Order updatedOrder = orderService.updateOrderStatus(id, request.getStatus());
         return ResponseEntity.ok(OrderResponse.fromEntity(updatedOrder));
     }
 

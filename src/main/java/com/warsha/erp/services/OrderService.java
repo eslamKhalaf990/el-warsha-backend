@@ -100,7 +100,6 @@ public class OrderService {
         existingOrder.setDeliveryCharge(request.getDelivery());
         existingOrder.setDiscount(request.getDiscount());
         existingOrder.setTotalPrice(request.calculateTotalPrice());
-        existingOrder.setStatus("Updated");
 
         // 3. Revert previous product quantities
         for (OrderItems item : existingOrder.getItems()) {
@@ -110,9 +109,8 @@ public class OrderService {
             productService.updateProduct(product.getProductID(), product);
         }
 
-        // 4. Update existing items safely
-        existingOrder.getItems().clear(); // clear the collection but keep the reference
-
+        // 4. Update items
+        existingOrder.getItems().clear(); // keep the reference
         for (OrderItemRequest itemReq : request.getItems()) {
             Product product = productService.getProductById(itemReq.getProductId());
 
@@ -125,20 +123,43 @@ public class OrderService {
             product.setQuantity(String.valueOf(oldValue - newValue));
             productService.updateProduct(product.getProductID(), product);
 
-            // Create new order item and add to existing collection
+            // Create new order item
             OrderItems item = new OrderItems();
-            item.setOrder(existingOrder); // maintain bidirectional link
+            item.setOrder(existingOrder);
             item.setProduct(product);
             item.setQuantity(newValue);
             item.setUnitPrice(itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : product.getSellingPrice());
 
-            existingOrder.getItems().add(item); // add to the same collection
+            existingOrder.getItems().add(item);
         }
 
+        // 5. Save order before dependent entities (important!)
+        Order savedOrder = orderRepository.save(existingOrder);
 
-        // 6. Optionally handle invoice and payment updates here
-        // invoiceService.generateInvoice(savedOrder.getId());
-        // paymentService.updatePayment(...)
+        // 6. Handle invoice updates
+        invoiceService.regenerateInvoice(savedOrder.getId());
+
+        // clean up old payments
+        paymentService.deletePaymentsByOrderId(savedOrder.getId());
+
+        // create new payment from updated request
+        CreatePaymentRequest paymentRequest = new CreatePaymentRequest();
+        paymentRequest.setOrderId(savedOrder.getId());
+        paymentRequest.setAmountPaid(request.getDownPayment());
+        paymentRequest.setPaymentMethod(request.getPaymentMethod());
+        paymentRequest.setPaymentStatus("Completed"); // or based on logic
+
+        paymentService.createPayment(paymentRequest);
+
+        return savedOrder;
+    }
+
+    @Transactional
+    public Order updateOrderStatus(Long orderId, String status) {
+        Order existingOrder = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        existingOrder.setStatus(status);
 
         return orderRepository.save(existingOrder);
     }
@@ -167,7 +188,7 @@ public class OrderService {
             // Map customer
             Customer customer = order.getCustomer();
             CustomerDto customerDTO = new CustomerDto();
-            customerDTO.setCustomerId(customer.getCustomerID());
+            customerDTO.setCustomerId(customer.getId());
             customerDTO.setFullName(customer.getFullName());
             customerDTO.setEmail(customer.getEmail());
             customerDTO.setPhone(customer.getPhone());

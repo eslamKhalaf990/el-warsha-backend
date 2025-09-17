@@ -32,7 +32,7 @@ public class InvoiceDto {
         // customer
         CustomerDto customerDto = new CustomerDto();
 
-        customerDto.setCustomerId(orderEntity.getCustomer().getCustomerID());
+        customerDto.setCustomerId(orderEntity.getCustomer().getId());
         customerDto.setFullName(orderEntity.getCustomer().getFullName());
         customerDto.setAddress(orderEntity.getCustomer().getAddress());
         customerDto.setPhone(orderEntity.getCustomer().getPhone());

@@ -15,23 +15,23 @@ public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "CustomerID")
-    private Long CustomerID;
+    private Long id;
 
     @Column(name = "FullName")
-    private String FullName;
+    private String fullName;
 
     @Column(name = "Email")
-    private String Email;
+    private String email;
 
     @Column(name = "Phone")
-    private String Phone;
+    private String phone;
 
     @Column(name = "Address")
-    private String Address;
+    private String address;
 
     @Column(name = "CreatedAt")
-    private LocalDateTime CreatedAt;
+    private LocalDateTime createdAt;
 
     @Column(name = "UpdatedAt")
-    private LocalDateTime UpdatedAt;
+    private LocalDateTime updatedAt;
 }

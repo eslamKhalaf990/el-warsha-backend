@@ -11,6 +11,8 @@ import com.warsha.erp.entities.OrderItems;
 import com.warsha.erp.repository.InvoiceRepository;
 import com.warsha.erp.repository.OrderRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -283,5 +285,24 @@ public class InvoiceService {
 
         return footerTable;
     }
+
+    @Transactional
+    public void regenerateInvoice(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        Invoice existingInvoice = invoiceRepository.findByOrderId(orderId);
+
+        if (existingInvoice != null) {
+            existingInvoice.setIssuedDate(java.time.LocalDate.now());
+            existingInvoice.setInvoiceNumber("INV-" + System.currentTimeMillis());
+            existingInvoice.setOrder(order);
+            invoiceRepository.save(existingInvoice);
+        } else {
+            // if missing, generate a new one
+            generateInvoice(orderId);
+        }
+    }
+
 
 }

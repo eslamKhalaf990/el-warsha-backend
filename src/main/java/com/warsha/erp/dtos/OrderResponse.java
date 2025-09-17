@@ -38,7 +38,7 @@ public class OrderResponse {
         // Map customer
         Customer customer = order.getCustomer();
         CustomerDto customerDTO = new CustomerDto();
-        customerDTO.setCustomerId(customer.getCustomerID());
+        customerDTO.setCustomerId(customer.getId());
         customerDTO.setFullName(customer.getFullName());
         customerDTO.setEmail(customer.getEmail());
         customerDTO.setPhone(customer.getPhone());
