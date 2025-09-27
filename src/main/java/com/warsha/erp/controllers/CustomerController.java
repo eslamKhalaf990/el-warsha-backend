@@ -1,5 +1,6 @@
 package com.warsha.erp.controllers;
 
+import com.warsha.erp.dtos.CustomerCountByGovernorate;
 import com.warsha.erp.entities.Customer;
 import com.warsha.erp.services.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,11 @@ public class CustomerController {
     @GetMapping
     public List<Customer> getAll() {
         return customerService.getAllCustomers();
+    }
+
+    @GetMapping("/countsByGovernorate")
+    public List<CustomerCountByGovernorate> getCountsByGovernorate() {
+        return customerService.getCustomerCountsByGovernorate();
     }
 
     @GetMapping("/{id}")
@@ -39,6 +45,8 @@ public class CustomerController {
         customerService.deleteCustomer(id);
         return ResponseEntity.noContent().build();
     }
+
+
 
     @DeleteMapping
     public ResponseEntity<Void> deleteAll() {

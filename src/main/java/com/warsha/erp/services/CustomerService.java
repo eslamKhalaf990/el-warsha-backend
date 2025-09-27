@@ -1,5 +1,6 @@
 package com.warsha.erp.services;
 
+import com.warsha.erp.dtos.CustomerCountByGovernorate;
 import com.warsha.erp.entities.Customer;
 import com.warsha.erp.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,10 @@ public class CustomerService {
         return customerRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
     }
 
+    public List<CustomerCountByGovernorate> getCustomerCountsByGovernorate() {
+        return customerRepository.countCustomersByGovernorate();
+    }
+
     public Customer getCustomerByID(Long id) {
         return customerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
@@ -32,7 +37,7 @@ public class CustomerService {
     public Customer updateCustomer(Long id, Customer updateCustomer) {
         Customer existing = getCustomerByID(id);
         existing.setFullName(updateCustomer.getFullName());
-        existing.setEmail(updateCustomer.getEmail());
+        existing.setGovernorate(updateCustomer.getGovernorate());
         existing.setPhone(updateCustomer.getPhone());
         existing.setAddress(updateCustomer.getAddress());
         existing.setUpdatedAt(LocalDateTime.now());

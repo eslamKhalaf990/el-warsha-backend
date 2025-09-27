@@ -1,6 +1,7 @@
 package com.warsha.erp.controllers;
 
 import com.warsha.erp.dtos.CreateOrderRequest;
+import com.warsha.erp.dtos.OrderCountByGovernorateDto;
 import com.warsha.erp.dtos.OrderResponse;
 import com.warsha.erp.dtos.UpdateOrderStatus;
 import com.warsha.erp.entities.Order;
@@ -25,6 +26,11 @@ public class OrderController {
     public ResponseEntity<Order> createOrder(@RequestBody CreateOrderRequest request) {
         Order newOrder = orderService.createOrder(request);
         return ResponseEntity.ok(newOrder);
+    }
+
+    @GetMapping("/countGovernorates")
+    public List<OrderCountByGovernorateDto> getOrderCountsByGovernorate() {
+        return orderService.getOrderCountsByGovernorate();
     }
 
     @PutMapping("/{id}")

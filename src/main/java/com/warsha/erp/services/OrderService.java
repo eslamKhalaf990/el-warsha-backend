@@ -164,6 +164,11 @@ public class OrderService {
         return orderRepository.save(existingOrder);
     }
 
+    public List<OrderCountByGovernorateDto> getOrderCountsByGovernorate() {
+        return orderRepository.countOrdersByGovernorate();
+    }
+
+
     public List<OrderResponse> getAllOrders() {
         List<Order> orders = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
 
@@ -190,7 +195,7 @@ public class OrderService {
             CustomerDto customerDTO = new CustomerDto();
             customerDTO.setCustomerId(customer.getId());
             customerDTO.setFullName(customer.getFullName());
-            customerDTO.setGovernorate(customer.getEmail());
+            customerDTO.setGovernorate(customer.getGovernorate());
             customerDTO.setPhone(customer.getPhone());
             customerDTO.setAddress(customer.getAddress());
             dto.setCustomer(customerDTO);
