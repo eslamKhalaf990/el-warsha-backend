@@ -9,7 +9,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/customers")
-@CrossOrigin // optional: allows cross-origin requests (good for Flutter)
 public class CustomerController {
 
     @Autowired

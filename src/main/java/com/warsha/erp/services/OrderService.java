@@ -190,7 +190,7 @@ public class OrderService {
             CustomerDto customerDTO = new CustomerDto();
             customerDTO.setCustomerId(customer.getId());
             customerDTO.setFullName(customer.getFullName());
-            customerDTO.setEmail(customer.getEmail());
+            customerDTO.setGovernorate(customer.getEmail());
             customerDTO.setPhone(customer.getPhone());
             customerDTO.setAddress(customer.getAddress());
             dto.setCustomer(customerDTO);

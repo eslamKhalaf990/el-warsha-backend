@@ -9,7 +9,7 @@ public class CustomerDto {
 
     private Long customerId;
     private String fullName;
-    private String email;
+    private String governorate;
     private String phone;
     private String address;
 }

@@ -12,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/invoice")
-@CrossOrigin
 public class InvoiceController {
     @Autowired
     private InvoiceService invoiceService;
