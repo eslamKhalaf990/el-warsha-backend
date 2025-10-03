@@ -303,6 +303,4 @@ public class InvoiceService {
             generateInvoice(orderId);
         }
     }
-
-
 }

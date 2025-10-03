@@ -45,6 +45,7 @@ public class OrderService {
         order.setDeliveryCharge(request.getDelivery());
         order.setTotalPrice(request.calculateTotalPrice());
         order.setDiscount(request.getDiscount());
+        order.setNotes(request.getNotes());
 
         List<OrderItems> itemList = new ArrayList<>();
 
@@ -99,6 +100,7 @@ public class OrderService {
         existingOrder.setOrderSource(request.getOrderSource());
         existingOrder.setDeliveryCharge(request.getDelivery());
         existingOrder.setDiscount(request.getDiscount());
+        existingOrder.setNotes(request.getNotes());
         existingOrder.setTotalPrice(request.calculateTotalPrice());
 
         // 3. Revert previous product quantities
@@ -168,7 +170,6 @@ public class OrderService {
         return orderRepository.countOrdersByGovernorate();
     }
 
-
     public List<OrderResponse> getAllOrders() {
         List<Order> orders = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
 
@@ -178,6 +179,7 @@ public class OrderService {
             OrderResponse dto = new OrderResponse();
 
             dto.setOrderId(order.getId());
+            dto.setNotes(order.getNotes());
 
             dto.setPaymentMethod(paymentDtos.get(0).getPaymentMethod());
 

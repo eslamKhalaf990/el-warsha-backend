@@ -36,7 +36,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/api/files/**").permitAll()
+                        .requestMatchers("/auth/**", "/api/files/**", "invoice/pdf/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // preflight
                         .anyRequest().authenticated()
                 )
@@ -45,6 +45,4 @@ public class SecurityConfig {
 
         return http.build();
     }
-
-
 }

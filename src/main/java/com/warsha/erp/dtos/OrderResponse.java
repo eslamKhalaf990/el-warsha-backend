@@ -16,6 +16,7 @@ public class OrderResponse {
 
     private double discount;
     private double delivery;
+    private String notes;
     private double totalPrice;
     private double downPayment;
     private String orderSource;
@@ -34,6 +35,7 @@ public class OrderResponse {
         dto.setDelivery(order.getDeliveryCharge());
         dto.setDiscount(order.getDiscount());
         dto.setTotalPrice(order.getTotalPrice());
+        dto.setNotes(order.getNotes());
 
         // Map customer
         Customer customer = order.getCustomer();

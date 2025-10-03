@@ -15,6 +15,7 @@ public class CreateOrderRequest {
 
     private String paymentMethod;
     private String orderSource;
+    private String notes;
 
     private double downPayment;
     private double totalPrice;
