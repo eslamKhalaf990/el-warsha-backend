@@ -48,17 +48,22 @@ public class InvoiceService {
         return invoiceRepository.save(invoice);
     }
 
-    public Invoice getInvoiceById(Long id) {
-        return invoiceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+    public Invoice getInvoiceById(Long orderId) {
+        Invoice invoice = invoiceRepository.findByOrderId(orderId);
+        if (invoice == null) {
+            throw new RuntimeException("Invoice not found for Order ID: " + orderId);
+        }
+        return invoice;
     }
 
     public void deleteInvoiceByOrderId(Long orderId) {
         Invoice invoice = invoiceRepository.findByOrderId(orderId);
-        if (invoice != null) {
-            invoiceRepository.delete(invoice);
+        if (invoice == null) {
+            throw new RuntimeException("Invoice not found for Order ID: " + orderId);
         }
+        invoiceRepository.delete(invoice);
     }
+
 
     public List<Invoice> getAllInvoices() {
         return invoiceRepository.findAll();

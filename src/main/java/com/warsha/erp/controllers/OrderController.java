@@ -39,7 +39,7 @@ public class OrderController {
         return ResponseEntity.ok(OrderResponse.fromEntity(updatedOrder));
     }
 
-    @PutMapping("/{id}/status")
+    @PutMapping("/status/{id}")
     public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable Long id,
             @RequestBody UpdateOrderStatus request) {

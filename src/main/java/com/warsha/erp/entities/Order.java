@@ -38,7 +38,7 @@ public class Order {
     @Column(name= "DeliveryCharge", nullable = false)
     private Double DeliveryCharge;
 
-    @Column(name= "Notes", nullable = false)
+    @Column(name= "Notes")
     private String Notes;
 
     @ManyToOne(fetch = FetchType.LAZY)
