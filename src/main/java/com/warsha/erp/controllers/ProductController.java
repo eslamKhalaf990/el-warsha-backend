@@ -2,6 +2,7 @@ package com.warsha.erp.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.warsha.erp.dtos.ProductDTO;
 import com.warsha.erp.entities.Product;
 import com.warsha.erp.services.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +24,13 @@ public class ProductController {
     private ProductService productService;
 
     @GetMapping
-    public List<Product> getAll() {
+    public List<ProductDTO> getAll() {
         return productService.getAllProducts();
+    }
+
+    @GetMapping("/getByCategoryId")
+    public List<ProductDTO> getAllByCategoryId(@RequestParam Long categoryId) {
+        return productService.getProductsByCategoryId(categoryId);
     }
 
     @GetMapping("/getImage")

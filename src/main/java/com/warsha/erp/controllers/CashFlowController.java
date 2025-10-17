@@ -27,5 +27,4 @@ public class CashFlowController {
     public RevenueSummaryDto getRevenueSummary() {
         return cashflowService.getRevenueSummary();
     }
-
 }

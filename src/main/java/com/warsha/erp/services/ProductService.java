@@ -1,4 +1,5 @@
 package com.warsha.erp.services;
+import com.warsha.erp.dtos.ProductDTO;
 import com.warsha.erp.entities.Product;
 import com.warsha.erp.repository.ProductRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -15,7 +16,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
-
+import java.util.stream.Collectors;
 
 
 @Service
@@ -30,9 +31,52 @@ public class ProductService {
         this.googleDriveService = googleDriveService;
     }
 
+    public List<ProductDTO> getAllProducts() {
+        List<Product> products = productRepository.findAllNotDeleted();
 
-    public List<Product> getAllProducts() {
-        return productRepository.findAllNotDeleted();
+        return products.stream()
+                .map(product -> {
+                    ProductDTO dto = new ProductDTO();
+                    dto.setId(product.getProductID());
+                    dto.setName(product.getName());
+                    dto.setDeleted(product.getDeleted());
+                    dto.setDeletedAt(product.getDeletedAt());
+                    dto.setDescription(product.getDescription());
+                    dto.setBuyingPrice(product.getBuyingPrice());
+                    dto.setSellingPrice(product.getSellingPrice());
+                    dto.setImageUrl(product.getImageUrl());
+                    dto.setSku(product.getSku());
+                    dto.setQuantity(product.getQuantity());
+                    dto.setCategoryName(
+                            product.getCategory() != null ? product.getCategory().getName() : null
+                    );
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<ProductDTO> getProductsByCategoryId(Long categoryId) {
+        List<Product> products = productRepository.findByCategoryId(categoryId);
+
+        return products.stream()
+                .map(product -> {
+                    ProductDTO dto = new ProductDTO();
+                    dto.setId(product.getProductID());
+                    dto.setName(product.getName());
+                    dto.setDeleted(product.getDeleted());
+                    dto.setDeletedAt(product.getDeletedAt());
+                    dto.setDescription(product.getDescription());
+                    dto.setBuyingPrice(product.getBuyingPrice());
+                    dto.setSellingPrice(product.getSellingPrice());
+                    dto.setImageUrl(product.getImageUrl());
+                    dto.setSku(product.getSku());
+                    dto.setQuantity(product.getQuantity());
+                    dto.setCategoryName(
+                            product.getCategory() != null ? product.getCategory().getName() : null
+                    );
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     public Product getProductById(Long id) {

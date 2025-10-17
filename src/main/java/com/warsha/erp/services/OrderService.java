@@ -174,20 +174,20 @@ public class OrderService {
         List<Order> orders = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
 
         return orders.stream().map(order -> {
-            List<PaymentDto> paymentDtos = paymentService.getPaymentsByOrder(order.getId());
+            List<PaymentDto> paymentDTOs = paymentService.getPaymentsByOrder(order.getId());
 
             OrderResponse dto = new OrderResponse();
 
             dto.setOrderId(order.getId());
             dto.setNotes(order.getNotes());
 
-            dto.setPaymentMethod(paymentDtos.get(0).getPaymentMethod());
+            dto.setPaymentMethod(paymentDTOs.get(0).getPaymentMethod());
 
             dto.setOrderDate(order.getOrderDate());
             dto.setStatus(order.getStatus());
 
             dto.setOrderSource(order.getOrderSource());
-            dto.setDownPayment(paymentDtos.get(0).getAmountPaid());
+            dto.setDownPayment(paymentDTOs.get(0).getAmountPaid());
             dto.setDiscount(order.getDiscount());
             dto.setDelivery(order.getDeliveryCharge());
             dto.setTotalPrice(order.getTotalPrice());

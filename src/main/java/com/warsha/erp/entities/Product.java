@@ -30,8 +30,9 @@ public class Product {
     @Column(name = "SellingPrice")
     private Double SellingPrice;
 
-    @Column(name = "Category")
-    private String Category;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "Category", nullable = false)
+    private Category Category;
 
     @Column(name = "ImageUrl")
     private String ImageUrl;
