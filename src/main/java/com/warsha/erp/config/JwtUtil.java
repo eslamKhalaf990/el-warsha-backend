@@ -17,9 +17,9 @@ public class JwtUtil {
     private static final String SECRET_KEY = "the-great-strong-secret-key-01236547890!!";
     private final SecretKey key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
 
-    private final long EXPIRATION = 1000 * 60 * 60; // 1 hour
-
     public String generateToken(String username) {
+        // 1 hour
+        long EXPIRATION = 1000 * 60 * 60;
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())

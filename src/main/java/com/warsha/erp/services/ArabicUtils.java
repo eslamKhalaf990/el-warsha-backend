@@ -10,8 +10,8 @@ public class ArabicUtils {
             ArabicShaping arabicShaping = new ArabicShaping(ArabicShaping.LETTERS_SHAPE);
             String shaped = arabicShaping.shape(input);
 
-            Bidi bidi = new Bidi(shaped, Bidi.DIRECTION_DEFAULT_RIGHT_TO_LEFT);
-            return bidi.writeReordered(Bidi.DO_MIRRORING);
+            Bidi bidi = new Bidi(input, Bidi.DIRECTION_RIGHT_TO_LEFT);
+            return shaped;
         } catch (ArabicShapingException e) {
             e.printStackTrace();
             return input;

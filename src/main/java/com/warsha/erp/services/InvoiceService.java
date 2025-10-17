@@ -64,7 +64,6 @@ public class InvoiceService {
         invoiceRepository.delete(invoice);
     }
 
-
     public List<Invoice> getAllInvoices() {
         return invoiceRepository.findAll();
     }
@@ -106,6 +105,9 @@ public class InvoiceService {
 
         // Left Cell: Invoice Info
         PdfPCell textCell = new PdfPCell();
+        textCell.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
+
+
         textCell.setBorder(Rectangle.NO_BORDER);
 
         // Arabic text
@@ -133,141 +135,88 @@ public class InvoiceService {
         return headerTable;
     }
 
-//    private PdfPTable createItemsTable(Invoice invoice) throws Exception {
-//        // Load Arabic font
-//        BaseFont bf = BaseFont.createFont("fonts/NotoKufiArabic-Regular.ttf",
-//                BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-//        Font boldFont = new Font(bf, 12, Font.BOLD);
-//        Font normalFont = new Font(bf, 12);
-//
-//        PdfPTable table = new PdfPTable(4);
-//        table.setWidthPercentage(100);
-//        table.setWidths(new float[]{50, 15, 15, 20});
-//
-//        // Arabic headers (reshaped)
-//        String[] headers = {
-//                ArabicUtils.reshapeArabic("الإجمالي"),  // Total
-//                ArabicUtils.reshapeArabic("السعر"),    // Price
-//                ArabicUtils.reshapeArabic("الكمية"),   // Quantity
-//                ArabicUtils.reshapeArabic("المنتج"),   // Product
-//        };
-//
-//        for (String col : headers) {
-//            PdfPCell header = new PdfPCell();
-//            Paragraph p = new Paragraph(col, boldFont);
-//            if (col.equals(ArabicUtils.reshapeArabic("الإجمالي"))) {
-//                p.setAlignment(Element.ALIGN_LEFT); // right align total
-//            } else {
-//                p.setAlignment(Element.ALIGN_RIGHT);
-//            }
-//            header.addElement(p);
-//
-//            header.setBorder(Rectangle.BOTTOM);
-//            header.setBorderWidthBottom(0.7f);
-//            header.setPaddingTop(8f);
-//            header.setPaddingBottom(20f);
-//
-//            table.addCell(header);
-//        }
-//
-//        // Data Rows
-//        List<OrderItems> items = invoice.getOrder().getItems();
-//
-//        for (int i = 0; i < items.size(); i++) {
-//            OrderItems item = items.get(i);
-//
-//            PdfPCell productCell = createArabicCell(item.getProduct().getName(), normalFont, Element.ALIGN_RIGHT);
-//            PdfPCell qtyCell = createArabicCell(String.valueOf(item.getQuantity()), normalFont, Element.ALIGN_RIGHT);
-//            PdfPCell priceCell = createArabicCell(item.getProduct().getSellingPrice() + " جنيه", normalFont, Element.ALIGN_RIGHT);
-//            PdfPCell totalCell = createArabicCell((item.getQuantity() * item.getProduct().getSellingPrice()) + " جنيه", normalFont, Element.ALIGN_LEFT);
-//
-//            if (i == 0) { // push first row away from header
-//                productCell.setPaddingTop(20f);
-//                qtyCell.setPaddingTop(20f);
-//                priceCell.setPaddingTop(20f);
-//                totalCell.setPaddingTop(20f);
-//            }
-//            table.addCell(totalCell);
-//            table.addCell(priceCell);
-//            table.addCell(qtyCell);
-//            table.addCell(productCell);
-//        }
-//
-//        return table;
-//    }
+    private PdfPTable createItemsTable(Invoice invoice) throws Exception {
+        // Load Arabic font
+        BaseFont bf = BaseFont.createFont("fonts/NotoKufiArabic-Regular.ttf",
+                BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+        Font boldFont = new Font(bf, 10, Font.BOLD);
+        Font normalFont = new Font(bf, 10);
 
-private PdfPTable createItemsTable(Invoice invoice) throws Exception {
-    // Load Arabic font
-    BaseFont bf = BaseFont.createFont("fonts/NotoKufiArabic-Regular.ttf",
-            BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-    Font boldFont = new Font(bf, 10, Font.BOLD);
-    Font normalFont = new Font(bf, 10);
+        // Adjust column count and widths to match the image: 5 columns
+        PdfPTable table = new PdfPTable(5);
+        table.setWidthPercentage(98);
 
-    // Adjust column count and widths to match the image: 5 columns
-    PdfPTable table = new PdfPTable(5);
-    table.setWidthPercentage(98);
+        // Adjust widths based on visual weight (e.g., Description is wider)
+        table.setWidths(new float[]{10, 10, 15, 35, 30});
 
-    // Adjust widths based on visual weight (e.g., Description is wider)
-    table.setWidths(new float[]{10, 10, 15, 35, 30});
+        // Arabic headers, re-ordered to match the image (right to left)
+        String[] headers = {
+                ArabicUtils.reshapeArabic("المجموع"),  // Total
+                ArabicUtils.reshapeArabic("الكمية"),   // Quantity
+                ArabicUtils.reshapeArabic("سعر الوحدة"),// Unit Price
+                ArabicUtils.reshapeArabic("الوصف"),    // Description
+                ArabicUtils.reshapeArabic("البند"),    // Item
+        };
 
-    // Arabic headers, re-ordered to match the image (right to left)
-    String[] headers = {
-            ArabicUtils.reshapeArabic("المجموع"),  // Total
-            ArabicUtils.reshapeArabic("الكمية"),   // Quantity
-            ArabicUtils.reshapeArabic("سعر الوحدة"),// Unit Price
-            ArabicUtils.reshapeArabic("الوصف"),    // Description
-            ArabicUtils.reshapeArabic("البند"),    // Item
-    };
+        for (String col : headers) {
 
-    for (String col : headers) {
+            PdfPCell headerCell = getPdfPCell(col, boldFont);
+            table.addCell(headerCell);
+        }
+
+        // Data Rows
+        List<OrderItems> items = invoice.getOrder().getItems();
+
+        for (OrderItems item : items) {
+            // Re-order and style cells
+            // Item (right-aligned)
+            PdfPCell itemCell = createArabicCell(item.getProduct().getName(), normalFont);
+
+            // Description (right-aligned)
+            PdfPCell descCell = createArabicCell(item.getProduct().getDescription(), normalFont);
+
+            // Unit Price (right-aligned)
+            PdfPCell priceCell = createArabicCell(String.valueOf(item.getProduct().getSellingPrice()), normalFont);
+
+            // Quantity (right-aligned)
+            PdfPCell qtyCell = createArabicCell(String.valueOf(item.getQuantity()), normalFont);
+
+            // Total (right-aligned)
+            double total = item.getQuantity() * item.getProduct().getSellingPrice();
+            PdfPCell totalCell = createArabicCell(String.valueOf(total), normalFont);
+
+            // Add cells to the table in the correct order (left to right)
+            table.addCell(totalCell);
+            table.addCell(qtyCell);
+            table.addCell(priceCell);
+            table.addCell(descCell);
+            table.addCell(itemCell);
+        }
+
+        return table;
+    }
+
+    private static PdfPCell getPdfPCell(String col, Font boldFont) {
         PdfPCell headerCell = new PdfPCell(new Phrase(col, boldFont));
         headerCell.setHorizontalAlignment(Element.ALIGN_CENTER);
         headerCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        headerCell.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
+
         headerCell.setBorder(Rectangle.BOX);
         headerCell.setBackgroundColor(Color.lightGray);
         headerCell.setBorderWidth(0.5f);
         headerCell.setPaddingTop(8f);
         headerCell.setPaddingBottom(8f);
-        table.addCell(headerCell);
+        return headerCell;
     }
-
-    // Data Rows
-    List<OrderItems> items = invoice.getOrder().getItems();
-
-    for (OrderItems item : items) {
-        // Re-order and style cells
-        // Item (right-aligned)
-        PdfPCell itemCell = createArabicCell(item.getProduct().getName(), normalFont);
-
-        // Description (right-aligned)
-        PdfPCell descCell = createArabicCell(item.getProduct().getDescription(), normalFont);
-
-        // Unit Price (right-aligned)
-        PdfPCell priceCell = createArabicCell(String.valueOf(item.getProduct().getSellingPrice()), normalFont);
-
-        // Quantity (right-aligned)
-        PdfPCell qtyCell = createArabicCell(String.valueOf(item.getQuantity()), normalFont);
-
-        // Total (right-aligned)
-        double total = item.getQuantity() * item.getProduct().getSellingPrice();
-        PdfPCell totalCell = createArabicCell(String.valueOf(total), normalFont);
-
-        // Add cells to the table in the correct order (left to right)
-        table.addCell(totalCell);
-        table.addCell(qtyCell);
-        table.addCell(priceCell);
-        table.addCell(descCell);
-        table.addCell(itemCell);
-    }
-
-    return table;
-}
 
     // Helper for reshaped Arabic text
     private PdfPCell createArabicCell(String content, Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(ArabicUtils.reshapeArabic(content), font));
-        cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        cell.setHorizontalAlignment(Element.ALIGN_LEFT);
         cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
+
         cell.setBorder(Rectangle.BOX);
         cell.setBorderWidth(0.5f);
         cell.setPadding(8f);
@@ -286,51 +235,35 @@ private PdfPTable createItemsTable(Invoice invoice) throws Exception {
         totalTable.setWidthPercentage(100);
         totalTable.setWidths(new float[]{1.5f, 2f});
         totalTable.setHorizontalAlignment(Element.ALIGN_LEFT);
-//        totalTable.setSpacingBefore(15f);
 
         // ========== LEFT COLUMN ==========
         PdfPCell leftCell = new PdfPCell();
         leftCell.setBorder(Rectangle.NO_BORDER);
+        leftCell.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
         leftCell.setBorderWidth(0.5f);
         leftCell.setPaddingLeft(5f);
+
         leftCell.setHorizontalAlignment(Element.ALIGN_LEFT);
 
         // Create an inner table to hold the two-column content
         PdfPTable innerTable = new PdfPTable(2);
         innerTable.setWidthPercentage(100);
         innerTable.setWidths(new float[]{1.5f, 2f}); // Adjust widths as needed
-        /*
 
-        leftCell.addElement(new Paragraph(ArabicUtils.reshapeArabic("المجموع: " + (paymentService.getPaymentsByOrder(invoice.getOrder().getId()).get(0).getAmountPaid() + invoice.getOrder().getTotalPrice()) + " جنيه"), smallBoldFont));
-
-        leftCell.addElement(new Paragraph(ArabicUtils.reshapeArabic("رسوم الشحن: " + invoice.getOrder().getDeliveryCharge() + " جنيه"), smallBoldFont));
-
-        leftCell.addElement(new Paragraph(ArabicUtils.reshapeArabic("الخصم: " + invoice.getOrder().getDiscount() + " جنيه"), smallBoldFont));
-
-        leftCell.addElement(new Paragraph(ArabicUtils.reshapeArabic("الاجمالي: " + (paymentService.getPaymentsByOrder(invoice.getOrder().getId()).get(0).getAmountPaid() + invoice.getOrder().getTotalPrice() + invoice.getOrder().getDeliveryCharge() - invoice.getOrder().getDiscount()) + " جنيه"), smallBoldFont));
-
-        leftCell.addElement(new Paragraph(ArabicUtils.reshapeArabic("مدفوع مسبقا: " + (paymentService.getPaymentsByOrder(invoice.getOrder().getId()).get(0).getAmountPaid() * -1) + " جنيه"), smallBoldFont));
-
-        leftCell.addElement(new Paragraph(ArabicUtils.reshapeArabic("المبلغ المتبقي: " + invoice.getOrder().getTotalPrice() + " جنيه"), smallBoldFont));
-
-
-         */
         // Add rows to the inner table using the helper
         addTotalRow(innerTable,"المجموع", String.valueOf(
                 invoice.getOrder().getTotalPrice() +
                 invoice.getOrder().getDiscount() - invoice.getOrder().getDeliveryCharge() +
-                paymentService.getPaymentsByOrder(invoice.getOrder().getId()).get(0).getAmountPaid()
+                paymentService.getPaymentsByOrder(invoice.getOrder().getId()).getFirst().getAmountPaid()
         ), smallBoldFont, smallBoldFont);
         addTotalRow(innerTable, "رسوم الشحن", String.valueOf(invoice.getOrder().getDeliveryCharge()), smallBoldFont, smallBoldFont);
         addTotalRow(innerTable, "الخصم", String.valueOf(invoice.getOrder().getDiscount()), smallBoldFont, smallBoldFont);
 
-        // Special row for "الاجمالي" with gray background
         addTotalRow(innerTable,"الاجمالي", String.valueOf((invoice.getOrder().getTotalPrice()
-//                + invoice.getOrder().getDiscount() - invoice.getOrder().getDeliveryCharge() +
-               + paymentService.getPaymentsByOrder(invoice.getOrder().getId()).get(0).getAmountPaid()
+               + paymentService.getPaymentsByOrder(invoice.getOrder().getId()).getFirst().getAmountPaid()
 
         )), smallBoldFont, smallBoldFont);
-        addTotalRow(innerTable, "مدفوع مسبقا", String.valueOf(paymentService.getPaymentsByOrder(invoice.getOrder().getId()).get(0).getAmountPaid() * -1), smallBoldFont, smallBoldFont);
+        addTotalRow(innerTable, "مدفوع مسبقا", String.valueOf(paymentService.getPaymentsByOrder(invoice.getOrder().getId()).getFirst().getAmountPaid() * -1), smallBoldFont, smallBoldFont);
         addTotalRow(innerTable, "المبلغ المتبقي", String.valueOf(invoice.getOrder().getTotalPrice()), smallBoldFont, smallBoldFont);
 
         // Add the inner table to the main left cell
@@ -339,19 +272,26 @@ private PdfPTable createItemsTable(Invoice invoice) throws Exception {
         // ========== RIGHT COLUMN ==========
         PdfPCell rightCell = new PdfPCell();
         rightCell.setBorder(Rectangle.NO_BORDER);
-        rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        rightCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+        rightCell.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
         rightCell.setPaddingTop(10f);
 
+        Paragraph notes = new Paragraph(ArabicUtils.reshapeArabic("ملاحظات: " + invoice.getOrder().getNotes()), smallBoldFont);
+        notes.setAlignment(Element.ALIGN_LEFT);
+        rightCell.addElement(notes);
+
         Paragraph shippingTo = new Paragraph(ArabicUtils.reshapeArabic("اسم العميل: " + invoice.getOrder().getCustomer().getFullName()), smallBoldFont);
-        shippingTo.setAlignment(Element.ALIGN_RIGHT);
+        shippingTo.setAlignment(Element.ALIGN_LEFT);
+        shippingTo.setSpacingBefore(10f);
+
         rightCell.addElement(shippingTo);
 
         Paragraph phone = new Paragraph(ArabicUtils.reshapeArabic("الهاتف: " + invoice.getOrder().getCustomer().getPhone()), smallBoldFont);
-        phone.setAlignment(Element.ALIGN_RIGHT);
+        phone.setAlignment(Element.ALIGN_LEFT);
         rightCell.addElement(phone);
 
         Paragraph address = new Paragraph(ArabicUtils.reshapeArabic("عنوان التوصيل: " + invoice.getOrder().getCustomer().getAddress()), smallBoldFont);
-        address.setAlignment(Element.ALIGN_RIGHT);
+        address.setAlignment(Element.ALIGN_LEFT);
         rightCell.addElement(address);
 
         // Add cells to table (one row, two columns)
@@ -365,15 +305,19 @@ private PdfPTable createItemsTable(Invoice invoice) throws Exception {
         PdfPCell valueCell = new PdfPCell(new Phrase(ArabicUtils.reshapeArabic(value + " جنيه"), valueFont));
         valueCell.setBorder(Rectangle.BOX); // No border
         valueCell.setPadding(8f);
-        valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        valueCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+        valueCell.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
         table.addCell(valueCell);
 
         PdfPCell labelCell = new PdfPCell(new Phrase(ArabicUtils.reshapeArabic(label), labelFont));
         labelCell.setBorder(Rectangle.BOX);
         labelCell.setPadding(8f);
-        labelCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        labelCell.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
+
+        labelCell.setHorizontalAlignment(Element.ALIGN_LEFT);
         table.addCell(labelCell);
     }
+
     private Element createFooter(Invoice invoice) throws DocumentException {
 
         // Fonts
@@ -392,21 +336,26 @@ private PdfPTable createItemsTable(Invoice invoice) throws Exception {
         footerTable.addCell(spacer);
 
         // Thank you + Terms cell
-        PdfPCell footerCell = new PdfPCell();
-        footerCell.setBorder(Rectangle.NO_BORDER);
-        footerCell.setHorizontalAlignment(Element.ALIGN_CENTER);
-
-        Paragraph thankYou = new Paragraph("Thank you for your order!", italicBoldFont);
-        thankYou.setAlignment(Element.ALIGN_CENTER);
-        footerCell.addElement(thankYou);
-
-        Paragraph terms = new Paragraph("Terms and Conditions\nThere is no return policy.", italicFont);
-        terms.setAlignment(Element.ALIGN_CENTER);
-        footerCell.addElement(terms);
+        PdfPCell footerCell = getPdfPCell(italicBoldFont, italicFont);
 
         footerTable.addCell(footerCell);
 
         return footerTable;
+    }
+
+    private static PdfPCell getPdfPCell(Font italicBoldFont, Font italicFont) {
+        PdfPCell footerCell = new PdfPCell();
+        footerCell.setBorder(Rectangle.NO_BORDER);
+        footerCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+
+        Paragraph thankYou = new Paragraph("All these accessories are made in\nELWARSHA with love by\nAhmed Nasser!", italicBoldFont);
+        thankYou.setAlignment(Element.ALIGN_CENTER);
+        footerCell.addElement(thankYou);
+
+        Paragraph terms = new Paragraph("From ELWARSHA to the whole world", italicFont);
+        terms.setAlignment(Element.ALIGN_CENTER);
+        footerCell.addElement(terms);
+        return footerCell;
     }
 
     @Transactional
