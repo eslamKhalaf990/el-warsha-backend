@@ -22,4 +22,5 @@ public class ProductDTO {
     private String sku;
     private String quantity;
     private String categoryName;
+    private Long categoryId;
 }

@@ -24,7 +24,9 @@ public class OrderService {
     @Autowired
     public OrderService(OrderRepository orderRepo,
                         CustomerService customerService,
-                        ProductService productService, InvoiceService invoiceService, PaymentService paymentService) {
+                        ProductService productService,
+                        InvoiceService invoiceService,
+                        PaymentService paymentService) {
         this.orderRepository = orderRepo;
         this.customerService = customerService;
         this.productService = productService;
@@ -181,13 +183,13 @@ public class OrderService {
             dto.setOrderId(order.getId());
             dto.setNotes(order.getNotes());
 
-            dto.setPaymentMethod(paymentDTOs.get(0).getPaymentMethod());
+            dto.setPaymentMethod(paymentDTOs.getFirst().getPaymentMethod());
 
             dto.setOrderDate(order.getOrderDate());
             dto.setStatus(order.getStatus());
 
             dto.setOrderSource(order.getOrderSource());
-            dto.setDownPayment(paymentDTOs.get(0).getAmountPaid());
+            dto.setDownPayment(paymentDTOs.getFirst().getAmountPaid());
             dto.setDiscount(order.getDiscount());
             dto.setDelivery(order.getDeliveryCharge());
             dto.setTotalPrice(order.getTotalPrice());
@@ -242,5 +244,4 @@ public class OrderService {
         // 5. Finally, delete the order
         orderRepository.delete(order);
     }
-
 }

@@ -47,6 +47,7 @@ public class ProductService {
                     dto.setImageUrl(product.getImageUrl());
                     dto.setSku(product.getSku());
                     dto.setQuantity(product.getQuantity());
+                    dto.setCategoryId(product.getCategory().getCategoryId());
                     dto.setCategoryName(
                             product.getCategory() != null ? product.getCategory().getName() : null
                     );

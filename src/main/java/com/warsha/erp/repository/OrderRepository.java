@@ -12,6 +12,6 @@ import java.util.List;
 public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT new com.warsha.erp.dtos.OrderCountByGovernorateDto(c.governorate, COUNT(o)) " +
             "FROM Order o JOIN o.customer c " +
-            "GROUP BY c.governorate")
+            "GROUP BY c.governorate ORDER BY COUNT(c) DESC")
     List<OrderCountByGovernorateDto> countOrdersByGovernorate();
 }
