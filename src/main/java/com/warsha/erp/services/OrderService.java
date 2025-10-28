@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,18 +22,20 @@ public class OrderService {
     private final ProductService productService;
     private final InvoiceService invoiceService;
     private final PaymentService paymentService;
+    private final BankTransactionService bankTransactionService;
 
     @Autowired
     public OrderService(OrderRepository orderRepo,
                         CustomerService customerService,
                         ProductService productService,
                         InvoiceService invoiceService,
-                        PaymentService paymentService) {
+                        PaymentService paymentService, BankTransactionService bankTransactionService) {
         this.orderRepository = orderRepo;
         this.customerService = customerService;
         this.productService = productService;
         this.invoiceService = invoiceService;
         this.paymentService = paymentService;
+        this.bankTransactionService = bankTransactionService;
     }
 
     @Transactional
@@ -164,6 +168,18 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
         existingOrder.setStatus(status);
+        // create transaction when order completed
+        if (status.equals("Completed")){
+            BankTransactionDTO bankTransactionDTO = new BankTransactionDTO();
+            bankTransactionDTO.setBankAccountId(3L);
+            bankTransactionDTO.setTransactionType("Deposit");
+            bankTransactionDTO.setReferenceType("Order");
+            bankTransactionDTO.setReferenceId(orderId);
+            bankTransactionDTO.setCategoryId(1L);
+            bankTransactionDTO.setDescription("Order #" + orderId + " Completed");
+            bankTransactionDTO.setAmount(BigDecimal.valueOf(existingOrder.getTotalPrice() - 5));
+            bankTransactionService.createTransaction(bankTransactionDTO);
+        }
 
         return orderRepository.save(existingOrder);
     }
