@@ -104,6 +104,7 @@ public class OrderService {
 
         // 2. Update basic order info
         existingOrder.setOrderSource(request.getOrderSource());
+        existingOrder.setCustomer(customerService.getCustomerByID(request.getCustomerId()));
         existingOrder.setDeliveryCharge(request.getDelivery());
         existingOrder.setDiscount(request.getDiscount());
         existingOrder.setNotes(request.getNotes());

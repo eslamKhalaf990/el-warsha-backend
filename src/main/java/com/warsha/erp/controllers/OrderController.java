@@ -23,9 +23,9 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<Order> createOrder(@RequestBody CreateOrderRequest request) {
+    public ResponseEntity<OrderResponse> createOrder(@RequestBody CreateOrderRequest request) {
         Order newOrder = orderService.createOrder(request);
-        return ResponseEntity.ok(newOrder);
+        return ResponseEntity.ok(OrderResponse.fromEntity(newOrder));
     }
 
     @GetMapping("/countGovernorates")

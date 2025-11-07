@@ -16,12 +16,11 @@ public class OrderResponse {
 
     private double discount;
     private double delivery;
-    private String notes;
     private double totalPrice;
     private double downPayment;
+    private String notes;
     private String orderSource;
     private String paymentMethod;
-
     private LocalDate orderDate;
     private CustomerDto customer;
     private List<OrderItemDto> orderItems;
