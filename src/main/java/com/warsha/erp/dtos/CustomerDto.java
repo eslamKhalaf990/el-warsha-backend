@@ -10,6 +10,8 @@ public class CustomerDto {
     private Long customerId;
     private String fullName;
     private String governorate;
+    private String city;
+    private String secondaryPhone;
     private String phone;
     private String address;
 }

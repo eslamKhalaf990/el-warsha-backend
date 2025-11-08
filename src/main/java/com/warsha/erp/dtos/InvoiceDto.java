@@ -34,6 +34,8 @@ public class InvoiceDto {
 
         customerDto.setCustomerId(orderEntity.getCustomer().getId());
         customerDto.setFullName(orderEntity.getCustomer().getFullName());
+        customerDto.setCity(orderEntity.getCustomer().getCity());
+        customerDto.setSecondaryPhone(orderEntity.getCustomer().getSecondaryPhone());
         customerDto.setAddress(orderEntity.getCustomer().getAddress());
         customerDto.setPhone(orderEntity.getCustomer().getPhone());
 

@@ -26,6 +26,12 @@ public class Customer {
     @Column(name = "Phone")
     private String phone;
 
+    @Column(name = "City")
+    private String city;
+
+    @Column(name = "SecondaryPhone")
+    private String secondaryPhone;
+
     @Column(name = "Address")
     private String address;
 

@@ -42,11 +42,11 @@ public class OrderService {
     public Order createOrder(CreateOrderRequest request) {
         Customer customer = customerService.getCustomerByID(request.getCustomerId());
 
+        // prepare basic order info
         Order order = new Order();
         order.setCustomer(customer);
         order.setOrderDate(LocalDate.now());
         order.setStatus("Pending");
-
         order.setOrderSource(request.getOrderSource());
         order.setDeliveryCharge(request.getDelivery());
         order.setTotalPrice(request.calculateTotalPrice());
@@ -55,6 +55,7 @@ public class OrderService {
 
         List<OrderItems> itemList = new ArrayList<>();
 
+        // loop through items
         for (OrderItemRequest itemReq : request.getItems()) {
             Product product = productService.getProductById(itemReq.getProductId());
 
@@ -82,14 +83,26 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
+        // generate invoice for order
         invoiceService.generateInvoice(savedOrder.getId());
 
+        // prepare payment for the order
         CreatePaymentRequest paymentRequest = new CreatePaymentRequest();
-
         paymentRequest.setOrderId(savedOrder.getId());
         paymentRequest.setAmountPaid(request.getDownPayment());
         paymentRequest.setPaymentMethod(request.getPaymentMethod());
         paymentRequest.setPaymentStatus("Completed");
+
+        // deposit the down payment to egypt post -5 EGP
+        BankTransactionDTO bankTransactionDTO = new BankTransactionDTO();
+        bankTransactionDTO.setBankAccountId(3L);
+        bankTransactionDTO.setTransactionType("Deposit");
+        bankTransactionDTO.setReferenceType("Order");
+        bankTransactionDTO.setReferenceId(savedOrder.getId());
+        bankTransactionDTO.setCategoryId(1L);
+        bankTransactionDTO.setDescription("A down payment from order #" + savedOrder.getId());
+        bankTransactionDTO.setAmount(BigDecimal.valueOf(request.getDownPayment() - 5));
+        bankTransactionService.createTransaction(bankTransactionDTO);
 
         paymentService.createPayment(paymentRequest);
 
@@ -178,7 +191,7 @@ public class OrderService {
             bankTransactionDTO.setReferenceId(orderId);
             bankTransactionDTO.setCategoryId(1L);
             bankTransactionDTO.setDescription("Order #" + orderId + " Completed");
-            bankTransactionDTO.setAmount(BigDecimal.valueOf(existingOrder.getTotalPrice() - 5));
+            bankTransactionDTO.setAmount(BigDecimal.valueOf(existingOrder.getTotalPrice()));
             bankTransactionService.createTransaction(bankTransactionDTO);
         }
 
@@ -217,6 +230,8 @@ public class OrderService {
             customerDTO.setCustomerId(customer.getId());
             customerDTO.setFullName(customer.getFullName());
             customerDTO.setGovernorate(customer.getGovernorate());
+            customerDTO.setSecondaryPhone(customer.getSecondaryPhone());
+            customerDTO.setCity(customer.getCity());
             customerDTO.setPhone(customer.getPhone());
             customerDTO.setAddress(customer.getAddress());
             dto.setCustomer(customerDTO);

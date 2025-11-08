@@ -41,6 +41,8 @@ public class OrderResponse {
         CustomerDto customerDTO = new CustomerDto();
         customerDTO.setCustomerId(customer.getId());
         customerDTO.setFullName(customer.getFullName());
+        customerDTO.setCity(customer.getCity());
+        customerDTO.setSecondaryPhone(customer.getSecondaryPhone());
         customerDTO.setGovernorate(customer.getGovernorate());
         customerDTO.setPhone(customer.getPhone());
         customerDTO.setAddress(customer.getAddress());
