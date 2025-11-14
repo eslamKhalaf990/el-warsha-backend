@@ -95,13 +95,13 @@ public class OrderService {
 
         // deposit the down payment to egypt post -5 EGP
         BankTransactionDTO bankTransactionDTO = new BankTransactionDTO();
-        bankTransactionDTO.setBankAccountId(3L);
+        bankTransactionDTO.setBankAccountId(request.getBankAccountId());
         bankTransactionDTO.setTransactionType("Deposit");
         bankTransactionDTO.setReferenceType("Order");
         bankTransactionDTO.setReferenceId(savedOrder.getId());
         bankTransactionDTO.setCategoryId(1L);
         bankTransactionDTO.setDescription("A down payment from order #" + savedOrder.getId());
-        bankTransactionDTO.setAmount(BigDecimal.valueOf(request.getDownPayment() - 5));
+        bankTransactionDTO.setAmount(BigDecimal.valueOf(request.getDownPayment()));
         bankTransactionService.createTransaction(bankTransactionDTO);
 
         paymentService.createPayment(paymentRequest);
@@ -177,15 +177,16 @@ public class OrderService {
     }
 
     @Transactional
-    public Order updateOrderStatus(Long orderId, String status) {
+    public Order updateOrderStatus(Long orderId, String status, Long bankAccountId) {
         Order existingOrder = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
         existingOrder.setStatus(status);
+
         // create transaction when order completed
         if (status.equals("Completed")){
             BankTransactionDTO bankTransactionDTO = new BankTransactionDTO();
-            bankTransactionDTO.setBankAccountId(3L);
+            bankTransactionDTO.setBankAccountId(bankAccountId);
             bankTransactionDTO.setTransactionType("Deposit");
             bankTransactionDTO.setReferenceType("Order");
             bankTransactionDTO.setReferenceId(orderId);

@@ -10,6 +10,7 @@ import java.util.List;
 public class CreateOrderRequest {
 
     private Long customerId;
+    private Long bankAccountId;
 
     private List<OrderItemRequest> items;
 

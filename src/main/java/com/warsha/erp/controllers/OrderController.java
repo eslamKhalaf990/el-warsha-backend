@@ -44,7 +44,7 @@ public class OrderController {
             @PathVariable Long id,
             @RequestBody UpdateOrderStatus request) {
 
-        Order updatedOrder = orderService.updateOrderStatus(id, request.getStatus());
+        Order updatedOrder = orderService.updateOrderStatus(id, request.getStatus(), request.getBankAccountId());
         return ResponseEntity.ok(OrderResponse.fromEntity(updatedOrder));
     }
 

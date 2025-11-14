@@ -1,12 +1,11 @@
 package com.warsha.erp.dtos;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class UpdateOrderStatus {
     private String status;
-
-    public String getStatus() {
-        return status;
-    }
-    public void setStatus(String status) {
-        this.status = status;
-    }
+    private Long bankAccountId;
 }
