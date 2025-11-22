@@ -2,10 +2,13 @@ package com.warsha.erp.services;
 
 import com.warsha.erp.dtos.DailyCashFlowDto;
 import com.warsha.erp.dtos.RevenueSummaryDto;
+import com.warsha.erp.dtos.TopProductDTO;
 import com.warsha.erp.repository.CashFlowRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -37,5 +40,26 @@ public class CashFlowService {
             dto.setPotentialRevenue((BigDecimal) row[2]);
             return dto;
         }).toList().getFirst();
+    }
+
+    public List<TopProductDTO> getTop5SoldProductsForMonth(Date targetDate) {
+
+        // 1. Get the raw data from the repository
+        List<Object[]> rawResults = cashFlowRepository.getTop5SoldProductsForMonth(targetDate);
+
+        // 2. Manually map the raw data to your new DTO
+        List<TopProductDTO> dtoList = new ArrayList<>();
+        for (Object[] row : rawResults) {
+            TopProductDTO dto = new TopProductDTO();
+
+            // Safely cast and set each field
+            dto.setProductId(row[0] != null ? ((Number) row[0]).longValue() : null);
+            dto.setName((String) row[1]);
+            dto.setTotalSold(row[2] != null ? ((Number) row[2]).intValue() : null);
+
+            dtoList.add(dto);
+        }
+
+        return dtoList;
     }
 }

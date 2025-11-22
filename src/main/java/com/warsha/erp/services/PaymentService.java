@@ -56,4 +56,15 @@ public class PaymentService {
             paymentRepo.deleteAll(payments);
         }
     }
+
+    public void cancelPaymentsByOrderId(Long orderId) {
+
+        List<Payment> payments = paymentRepo.findByOrderId(orderId); // Assuming you have this method
+
+        for (Payment payment : payments) {
+
+            payment.setPaymentStatus("Cancelled");
+            paymentRepo.save(payment);
+        }
+    }
 }

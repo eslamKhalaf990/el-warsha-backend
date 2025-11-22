@@ -43,6 +43,9 @@ public class Product {
     @Column(name = "Quantity")
     private String Quantity;
 
+    @Column(name = "Sold")
+    private Integer Sold;
+
     @Column(name = "IsDeleted")
     private String deleted;
 

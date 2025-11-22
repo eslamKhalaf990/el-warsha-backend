@@ -69,11 +69,17 @@ public class OrderService {
                 item.setUnitPrice(itemReq.getUnitPrice());
 
             item.setQuantity(itemReq.getQuantity());
+
+            // ===== 1. Reduce stock =====
             int oldValue = Integer.parseInt(product.getQuantity());
             int newValue = itemReq.getQuantity();
+            product.setQuantity(String.valueOf(oldValue - newValue));
 
-            product.setQuantity(String.valueOf((oldValue - newValue)));
+            // ===== 2. Increase sold =====
+            int soldBefore = product.getSold() != null ? product.getSold() : 0;
+            product.setSold(soldBefore + newValue);
 
+            // ===== 3. Save product =====
             productService.updateProduct(itemReq.getProductId(), product);
 
             itemList.add(item);
@@ -101,7 +107,7 @@ public class OrderService {
         bankTransactionDTO.setReferenceId(savedOrder.getId());
         bankTransactionDTO.setCategoryId(1L);
         bankTransactionDTO.setDescription("A down payment from order #" + savedOrder.getId());
-        bankTransactionDTO.setAmount(BigDecimal.valueOf(request.getDownPayment()));
+        bankTransactionDTO.setAmount(BigDecimal.valueOf( request.getBankAccountId() == 3L ? request.getDownPayment() - 5: request.getDownPayment()));
         bankTransactionService.createTransaction(bankTransactionDTO);
 
         paymentService.createPayment(paymentRequest);
@@ -276,5 +282,49 @@ public class OrderService {
 
         // 5. Finally, delete the order
         orderRepository.delete(order);
+    }
+
+    @Transactional
+    public void cancelOrder(Long orderId) {
+        // 1. Fetch order
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // Good Practice: Check if already cancelled
+        if ("Cancelled".equals(order.getStatus())) {
+            // Or use an enum: OrderStatus.CANCELLED.equals(order.getStatus())
+            throw new IllegalStateException("Order " + orderId + " is already cancelled.");
+        }
+
+        // 2. Restock products
+        // This logic is correct and should remain.
+        // If an order is cancelled, items go back in stock.
+        for (OrderItems item : order.getItems()) {
+            Product product = item.getProduct();
+            int currentStock = Integer.parseInt(product.getQuantity());
+            int restoredQty = currentStock + item.getQuantity();
+            product.setQuantity(String.valueOf(restoredQty));
+
+            productService.updateProduct(product.getProductID(), product);
+        }
+
+        // 3. Soft-delete related payments (Update status)
+        // We replace the delete method with a new 'cancel' method.
+        paymentService.cancelPaymentsByOrderId(orderId);
+
+        // 4. Handle related invoice (Remove deletion)
+        // We NO LONGER delete the invoice.
+        // It remains in the system, linked to a "Cancelled" order.
+        // This preserves the historical record.
+
+        // 5. Finally, soft-delete the order (Update status)
+        // Instead of deleting, we set its status and save.
+        order.setStatus("Cancelled"); // Use "Cancelled", "Deleted", or an enum
+
+        // Your 'Orders' table has an 'UpdatedAt' column.
+        // If you're using @UpdateTimestamp, Spring Data JPA handles this automatically.
+        // If not, set it manually: order.setUpdatedAt(LocalDateTime.now());
+
+        orderRepository.save(order);
     }
 }
