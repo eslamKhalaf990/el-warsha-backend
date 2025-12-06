@@ -8,8 +8,11 @@ import com.warsha.erp.entities.Order;
 import com.warsha.erp.services.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Slice;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -49,9 +52,17 @@ public class OrderController {
         return ResponseEntity.ok(OrderResponse.fromEntity(updatedOrder));
     }
 
+//    @GetMapping
+//    public ResponseEntity<List<OrderResponse>> getAllOrders() {
+//        return ResponseEntity.ok(orderService.getAllOrders());
+//    }
+
     @GetMapping
-    public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        return ResponseEntity.ok(orderService.getAllOrders());
+    public ResponseEntity<List<OrderResponse>> getAllOrders(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        return ResponseEntity.ok(orderService.getAllOrders(startDate, endDate));
     }
 
     @DeleteMapping("/{id}")

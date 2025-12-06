@@ -215,14 +215,87 @@ public class OrderService {
         return orderRepository.countOrdersByGovernorate();
     }
 
-    public List<OrderResponse> getAllOrders() {
-        LocalDate startOfMonth = LocalDate.from(YearMonth.now().atDay(1).atStartOfDay());
+//    public List<OrderResponse> getAllOrders() {
+//        LocalDate startOfMonth = LocalDate.from(YearMonth.now().atDay(1).atStartOfDay());
+//
+//        LocalDate endOfMonth = LocalDate.from(YearMonth.now().plusMonths(1).atDay(1).atStartOfDay());
+//
+//        List<Order> orders = orderRepository.findByOrderDateBetween(startOfMonth, endOfMonth, Sort.by(Sort.Direction.DESC, "id"));
+//
+//        return orders.stream().map(order -> {
+//            List<PaymentDto> paymentDTOs = paymentService.getPaymentsByOrder(order.getId());
+//
+//            OrderResponse dto = new OrderResponse();
+//
+//            dto.setOrderId(order.getId());
+//            dto.setNotes(order.getNotes());
+//
+//            dto.setPaymentMethod(paymentDTOs.getFirst().getPaymentMethod());
+//
+//            dto.setOrderDate(order.getOrderDate());
+//            dto.setStatus(order.getStatus());
+//
+//            dto.setOrderSource(order.getOrderSource());
+//            dto.setDownPayment(paymentDTOs.getFirst().getAmountPaid());
+//            dto.setDiscount(order.getDiscount());
+//            dto.setDelivery(order.getDeliveryCharge());
+//            dto.setTotalPrice(order.getTotalPrice());
+//
+//            // Map customer
+//            Customer customer = order.getCustomer();
+//            CustomerDto customerDTO = new CustomerDto();
+//            customerDTO.setCustomerId(customer.getId());
+//            customerDTO.setFullName(customer.getFullName());
+//            customerDTO.setGovernorate(customer.getGovernorate());
+//            customerDTO.setSecondaryPhone(customer.getSecondaryPhone());
+//            customerDTO.setCity(customer.getCity());
+//            customerDTO.setPhone(customer.getPhone());
+//            customerDTO.setAddress(customer.getAddress());
+//            dto.setCustomer(customerDTO);
+//
+//            // Map order items
+//            List<OrderItemDto> itemDTOs = order.getItems().stream().map(item -> {
+//                return new OrderItemDto(item.getProduct().getProductID(),
+//                        item.getProduct().getName(),
+//                        item.getQuantity(),
+//                        item.getUnitPrice()
+//                );
+//            }).collect(Collectors.toList());
+//
+//            dto.setOrderItems(itemDTOs);
+//
+//            return dto;
+//        }).collect(Collectors.toList());
+//    }
 
-        LocalDate endOfMonth = LocalDate.from(YearMonth.now().plusMonths(1).atDay(1).atStartOfDay());
+    public List<OrderResponse> getAllOrders(LocalDate userStart, LocalDate userEnd) {
 
-        List<Order> orders = orderRepository.findByOrderDateBetween(startOfMonth, endOfMonth, Sort.by(Sort.Direction.DESC, "id"));
+        LocalDate startDateTime;
+        LocalDateTime endDateTime;
 
+        // 1. Determine the Date Range
+        if (userStart != null && userEnd != null) {
+            // CASE A: User provided specific dates
+            startDateTime = LocalDate.from(userStart.atStartOfDay());
+            // We go to the very end of the end date (e.g., 23:59:59)
+            endDateTime = userEnd.atTime(LocalTime.MAX);
+        } else {
+            // CASE B: No dates provided, default to CURRENT MONTH
+            startDateTime = LocalDate.from(YearMonth.now().atDay(1).atStartOfDay());
+            // Start of next month (exclusive) covers all current month
+            endDateTime = YearMonth.now().plusMonths(1).atDay(1).atStartOfDay();
+        }
+
+        // 2. Fetch from Repo
+        List<Order> orders = orderRepository.findByOrderDateBetween(
+                startDateTime,
+                LocalDate.from(endDateTime),
+                Sort.by(Sort.Direction.DESC, "id")
+        );
+
+        // 3. Map to DTO (Your original logic)
         return orders.stream().map(order -> {
+            // WARNING: This line causes an "N+1" performance issue (see note below)
             List<PaymentDto> paymentDTOs = paymentService.getPaymentsByOrder(order.getId());
 
             OrderResponse dto = new OrderResponse();
@@ -230,32 +303,37 @@ public class OrderService {
             dto.setOrderId(order.getId());
             dto.setNotes(order.getNotes());
 
-            dto.setPaymentMethod(paymentDTOs.getFirst().getPaymentMethod());
+            // Safety check in case an order has no payments yet to avoid IndexOutOfBoundsException
+            if (!paymentDTOs.isEmpty()) {
+                dto.setPaymentMethod(paymentDTOs.getFirst().getPaymentMethod());
+                dto.setDownPayment(paymentDTOs.getFirst().getAmountPaid());
+            }
 
             dto.setOrderDate(order.getOrderDate());
             dto.setStatus(order.getStatus());
-
             dto.setOrderSource(order.getOrderSource());
-            dto.setDownPayment(paymentDTOs.getFirst().getAmountPaid());
             dto.setDiscount(order.getDiscount());
             dto.setDelivery(order.getDeliveryCharge());
             dto.setTotalPrice(order.getTotalPrice());
 
             // Map customer
             Customer customer = order.getCustomer();
-            CustomerDto customerDTO = new CustomerDto();
-            customerDTO.setCustomerId(customer.getId());
-            customerDTO.setFullName(customer.getFullName());
-            customerDTO.setGovernorate(customer.getGovernorate());
-            customerDTO.setSecondaryPhone(customer.getSecondaryPhone());
-            customerDTO.setCity(customer.getCity());
-            customerDTO.setPhone(customer.getPhone());
-            customerDTO.setAddress(customer.getAddress());
-            dto.setCustomer(customerDTO);
+            if (customer != null) {
+                CustomerDto customerDTO = new CustomerDto();
+                customerDTO.setCustomerId(customer.getId());
+                customerDTO.setFullName(customer.getFullName());
+                customerDTO.setGovernorate(customer.getGovernorate());
+                customerDTO.setSecondaryPhone(customer.getSecondaryPhone());
+                customerDTO.setCity(customer.getCity());
+                customerDTO.setPhone(customer.getPhone());
+                customerDTO.setAddress(customer.getAddress());
+                dto.setCustomer(customerDTO);
+            }
 
             // Map order items
             List<OrderItemDto> itemDTOs = order.getItems().stream().map(item -> {
-                return new OrderItemDto(item.getProduct().getProductID(),
+                return new OrderItemDto(
+                        item.getProduct().getProductID(),
                         item.getProduct().getName(),
                         item.getQuantity(),
                         item.getUnitPrice()
