@@ -44,7 +44,7 @@ public class Product {
     private String Quantity;
 
     @Column(name = "Sold")
-    private Integer Sold;
+    private Integer Sold = 0;
 
     @Column(name = "IsDeleted")
     private String deleted;

@@ -10,4 +10,5 @@ public class TopProductDTO {
     private Long productId;
     private String name;
     private Integer totalSold;
+    private Integer totalProfit;
 }

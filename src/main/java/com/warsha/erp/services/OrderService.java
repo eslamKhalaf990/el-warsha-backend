@@ -4,12 +4,18 @@ import com.warsha.erp.dtos.*;
 import com.warsha.erp.entities.*;
 import com.warsha.erp.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -210,7 +216,11 @@ public class OrderService {
     }
 
     public List<OrderResponse> getAllOrders() {
-        List<Order> orders = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
+        LocalDate startOfMonth = LocalDate.from(YearMonth.now().atDay(1).atStartOfDay());
+
+        LocalDate endOfMonth = LocalDate.from(YearMonth.now().plusMonths(1).atDay(1).atStartOfDay());
+
+        List<Order> orders = orderRepository.findByOrderDateBetween(startOfMonth, endOfMonth, Sort.by(Sort.Direction.DESC, "id"));
 
         return orders.stream().map(order -> {
             List<PaymentDto> paymentDTOs = paymentService.getPaymentsByOrder(order.getId());

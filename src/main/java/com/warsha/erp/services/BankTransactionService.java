@@ -10,6 +10,7 @@ import com.warsha.erp.entities.TransactionCategory;
 import com.warsha.erp.repository.BankAccountRepository;
 import com.warsha.erp.repository.BankTransactionRepository;
 import com.warsha.erp.repository.TransactionCategoryRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -84,4 +85,15 @@ public class BankTransactionService {
     public List<BankAccountDTO> getAllAccounts() {
         return bankAccountRepository.findAllAccounts();
     }
+
+    @Transactional
+    public void hardResetSystem() {
+        // 1. Corresponds to: DELETE FROM [BankTransactions];
+        // deleteAllInBatch() is efficient because it generates a single SQL DELETE statement.
+        transactionRepository.deleteAllInBatch();
+
+        // 2. Corresponds to: UPDATE [BankAccounts] SET CurrentBalance = 0;
+        bankAccountRepository.resetAllBalances();
+    }
+
 }

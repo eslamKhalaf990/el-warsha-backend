@@ -33,6 +33,7 @@ public interface CashFlowRepository extends CrudRepository<Order, Long> {
         SELECT TOP 5
             p.ProductID,
             p.Name,
+            SUM(oi.Quantity * (oi.UnitPrice - p.BuyingPrice)) AS TotalProfitGenerated,
             SUM(oi.Quantity) AS TotalSoldForMonth
         FROM
             dbo.Orders o

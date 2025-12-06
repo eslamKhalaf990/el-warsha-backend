@@ -57,4 +57,10 @@ public class BankTransactionController {
         List<TransactionCategoryDTO> accounts = transactionService.getTransactionCategory();
         return ResponseEntity.ok(accounts);
     }
+
+    @DeleteMapping("/resetTransactions")
+    public ResponseEntity<String> resetSystem() {
+        transactionService.hardResetSystem();
+        return ResponseEntity.ok("System reset successful: All transactions deleted and balances updated to 0.");
+    }
 }

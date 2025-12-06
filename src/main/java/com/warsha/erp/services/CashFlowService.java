@@ -55,7 +55,8 @@ public class CashFlowService {
             // Safely cast and set each field
             dto.setProductId(row[0] != null ? ((Number) row[0]).longValue() : null);
             dto.setName((String) row[1]);
-            dto.setTotalSold(row[2] != null ? ((Number) row[2]).intValue() : null);
+            dto.setTotalSold(row[3] != null ? ((Number) row[3]).intValue() : null);
+            dto.setTotalProfit(row[2] != null ? ((Number) row[2]).intValue() : null);
 
             dtoList.add(dto);
         }
