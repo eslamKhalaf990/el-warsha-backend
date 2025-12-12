@@ -4,6 +4,8 @@ import com.warsha.erp.entities.Customer;
 import com.warsha.erp.entities.Order;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,7 +18,7 @@ public class OrderResponse {
 
     private double discount;
     private double delivery;
-    private double totalPrice;
+    private BigDecimal totalPrice;
     private double downPayment;
     private String notes;
     private String orderSource;
@@ -33,7 +35,7 @@ public class OrderResponse {
         dto.setOrderSource(order.getOrderSource());
         dto.setDelivery(order.getDeliveryCharge());
         dto.setDiscount(order.getDiscount());
-        dto.setTotalPrice(order.getTotalPrice());
+        dto.setTotalPrice(BigDecimal.valueOf(order.getTotalPrice()));
         dto.setNotes(order.getNotes());
 
         // Map customer

@@ -32,6 +32,12 @@ public class OrderController {
         return ResponseEntity.ok(OrderResponse.fromEntity(newOrder));
     }
 
+    @PostMapping("/placeOrder")
+    public ResponseEntity<OrderResponse> placeOrder(@RequestBody CreateOrderRequest request) {
+        Order newOrder = orderService.placeOrder(request);
+        return ResponseEntity.ok(OrderResponse.fromEntity(newOrder));
+    }
+
     @GetMapping("/countGovernorates")
     public List<OrderCountByGovernorateDto> getOrderCountsByGovernorate() {
         return orderService.getOrderCountsByGovernorate();
@@ -51,11 +57,6 @@ public class OrderController {
         Order updatedOrder = orderService.updateOrderStatus(id, request.getStatus(), request.getBankAccountId());
         return ResponseEntity.ok(OrderResponse.fromEntity(updatedOrder));
     }
-
-//    @GetMapping
-//    public ResponseEntity<List<OrderResponse>> getAllOrders() {
-//        return ResponseEntity.ok(orderService.getAllOrders());
-//    }
 
     @GetMapping
     public ResponseEntity<List<OrderResponse>> getAllOrders(

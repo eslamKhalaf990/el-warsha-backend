@@ -1,14 +1,18 @@
 package com.warsha.erp.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.warsha.erp.dtos.*;
 import com.warsha.erp.entities.*;
 import com.warsha.erp.repository.OrderRepository;
+import com.warsha.erp.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -18,12 +22,15 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
     private final CustomerService customerService;
     private final ProductService productService;
     private final InvoiceService invoiceService;
@@ -31,19 +38,20 @@ public class OrderService {
     private final BankTransactionService bankTransactionService;
 
     @Autowired
-    public OrderService(OrderRepository orderRepo,
+    public OrderService(OrderRepository orderRepo, ProductRepository productRepository,
                         CustomerService customerService,
                         ProductService productService,
                         InvoiceService invoiceService,
                         PaymentService paymentService, BankTransactionService bankTransactionService) {
         this.orderRepository = orderRepo;
+        this.productRepository = productRepository;
         this.customerService = customerService;
         this.productService = productService;
         this.invoiceService = invoiceService;
         this.paymentService = paymentService;
         this.bankTransactionService = bankTransactionService;
     }
-
+    // ERP Place Order
     @Transactional
     public Order createOrder(CreateOrderRequest request) {
         Customer customer = customerService.getCustomerByID(request.getCustomerId());
@@ -55,6 +63,7 @@ public class OrderService {
         order.setStatus("Pending");
         order.setOrderSource(request.getOrderSource());
         order.setDeliveryCharge(request.getDelivery());
+        // todo: you can't let the client send the unit prices
         order.setTotalPrice(request.calculateTotalPrice());
         order.setDiscount(request.getDiscount());
         order.setNotes(request.getNotes());
@@ -119,6 +128,143 @@ public class OrderService {
         paymentService.createPayment(paymentRequest);
 
         return savedOrder;
+    }
+
+    @Transactional
+    public Order placeOrder(CreateOrderRequest request) {
+        // 1. Fetch Customer
+        Customer customer = customerService.getCustomerByID(request.getCustomerId());
+
+        // 2. Extract IDs and Lock Products
+        // We fetch all products in ONE query with a LOCK to prevent race conditions
+        List<Long> productIds = request.getItems().stream()
+                .map(OrderItemRequest::getProductId)
+                .collect(Collectors.toList());
+
+        List<Product> products = productRepository.findAllByIdWithLock(productIds);
+
+        // Map for fast lookup: ID -> Product
+        Map<Long, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getProductID, Function.identity()));
+
+        // 3. Prepare Order Header
+        Order order = new Order();
+        order.setCustomer(customer);
+        order.setOrderDate(LocalDate.now());
+        order.setStatus("Pending");
+        order.setOrderSource(request.getOrderSource());
+        order.setDeliveryCharge(request.getDelivery());
+        order.setDiscount(request.getDiscount());
+        order.setNotes(request.getNotes());
+
+        List<OrderItems> orderItemsList = new ArrayList<>();
+        BigDecimal calculatedTotal = BigDecimal.ZERO;
+
+        // 4. Process Items (Validate & Update)
+        for (OrderItemRequest itemReq : request.getItems()) {
+            Product product = productMap.get(itemReq.getProductId());
+
+            // A. Existence Check
+            if (product == null) {
+                throw new IllegalArgumentException("Product ID " + itemReq.getProductId() + " not found.");
+            }
+
+            // B. Soft Delete Check (Don't sell deleted items)
+            if ("true".equalsIgnoreCase(product.getDeleted()) || product.getDeletedAt() != null) {
+                throw new IllegalArgumentException("Product " + product.getName() + " is no longer available.");
+            }
+
+            // C. Parse Quantity (String -> Int) safely
+            int currentStock = 0;
+            try {
+                currentStock = Integer.parseInt(product.getQuantity());
+            } catch (NumberFormatException e) {
+                throw new IllegalStateException("Data Error: Product " + product.getName() + " has invalid stock format.");
+            }
+
+            // D. Stock Check
+            if (currentStock < itemReq.getQuantity()) {
+                throw new IllegalArgumentException("Insufficient stock for: " + product.getName());
+            }
+
+            // E. Secure Price Calculation (Use DB Price, convert Double to BigDecimal)
+            // We use BigDecimal for money math to avoid floating point errors (e.g. 0.1 + 0.2 = 0.3000004)
+            BigDecimal unitPrice = BigDecimal.valueOf(product.getSellingPrice());
+            BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+            calculatedTotal = calculatedTotal.add(lineTotal);
+
+            // F. Update Product State (In Memory)
+            // Reduce Stock
+            product.setQuantity(String.valueOf(currentStock - itemReq.getQuantity()));
+
+            // Increase Sold Count (Handle null safety)
+            int currentSold = product.getSold() == null ? 0 : product.getSold();
+            product.setSold(currentSold + itemReq.getQuantity());
+            product.setUpdatedAt(LocalDateTime.now());
+
+            // G. Create Order Item
+            OrderItems item = new OrderItems();
+            item.setOrder(order);
+            item.setProduct(product);
+            item.setUnitPrice(product.getSellingPrice()); // Store as Double as per your entity
+            item.setQuantity(itemReq.getQuantity());
+
+            orderItemsList.add(item);
+        }
+
+        // 5. Save Bulk Updates (Products)
+        productRepository.saveAll(products);
+
+        // 6. Finalize Order
+        // Calculate final total: (Sum of Items + Delivery) - Discount
+        BigDecimal finalTotal = calculatedTotal.add(BigDecimal.valueOf(request.getDelivery()));
+        finalTotal = finalTotal.subtract(BigDecimal.valueOf(request.getDiscount()));
+
+        order.setTotalPrice(finalTotal.doubleValue());
+        order.setItems(orderItemsList);
+
+        Order savedOrder = orderRepository.save(order);
+
+        // 7. Handle Integrations (Invoice / Payment)
+        // Extracted to keep the main logic clean
+        processPostOrderIntegrations(request, savedOrder);
+
+        return savedOrder;
+    }
+
+    private void processPostOrderIntegrations(CreateOrderRequest request, Order savedOrder) {
+        // Generate Invoice
+        invoiceService.generateInvoice(savedOrder.getId());
+
+        // Egypt Post Fee Logic
+        // Defining constants makes logic readable and easy to change later
+        final long EGYPT_POST_BANK_ID = 3L;
+        final BigDecimal POST_FEE = BigDecimal.valueOf(5);
+
+        BigDecimal depositAmount = BigDecimal.valueOf(request.getDownPayment());
+
+        if (request.getBankAccountId() != null && request.getBankAccountId() == EGYPT_POST_BANK_ID) {
+            depositAmount = depositAmount.subtract(POST_FEE);
+        }
+
+        // Bank Transaction
+        BankTransactionDTO bankTx = new BankTransactionDTO();
+        bankTx.setBankAccountId(request.getBankAccountId());
+        bankTx.setTransactionType("Deposit");
+        bankTx.setReferenceType("Order");
+        bankTx.setReferenceId(savedOrder.getId());
+        bankTx.setCategoryId(1L);
+        bankTx.setDescription("Down payment for order #" + savedOrder.getId());
+        bankTx.setAmount(depositAmount);
+        bankTransactionService.createTransaction(bankTx);
+
+        // Payment Record
+        CreatePaymentRequest payReq = new CreatePaymentRequest();
+        payReq.setOrderId(savedOrder.getId());
+        payReq.setAmountPaid(request.getDownPayment()); // User pays full amount
+        payReq.setPaymentMethod(request.getPaymentMethod());
+        payReq.setPaymentStatus("Completed");
+        paymentService.createPayment(payReq);
     }
 
     @Transactional
@@ -204,7 +350,7 @@ public class OrderService {
             bankTransactionDTO.setReferenceId(orderId);
             bankTransactionDTO.setCategoryId(1L);
             bankTransactionDTO.setDescription("Order #" + orderId + " Completed");
-            bankTransactionDTO.setAmount(BigDecimal.valueOf(existingOrder.getTotalPrice()));
+            bankTransactionDTO.setAmount(BigDecimal.valueOf((existingOrder.getTotalPrice())));
             bankTransactionService.createTransaction(bankTransactionDTO);
         }
 
@@ -214,59 +360,6 @@ public class OrderService {
     public List<OrderCountByGovernorateDto> getOrderCountsByGovernorate() {
         return orderRepository.countOrdersByGovernorate();
     }
-
-//    public List<OrderResponse> getAllOrders() {
-//        LocalDate startOfMonth = LocalDate.from(YearMonth.now().atDay(1).atStartOfDay());
-//
-//        LocalDate endOfMonth = LocalDate.from(YearMonth.now().plusMonths(1).atDay(1).atStartOfDay());
-//
-//        List<Order> orders = orderRepository.findByOrderDateBetween(startOfMonth, endOfMonth, Sort.by(Sort.Direction.DESC, "id"));
-//
-//        return orders.stream().map(order -> {
-//            List<PaymentDto> paymentDTOs = paymentService.getPaymentsByOrder(order.getId());
-//
-//            OrderResponse dto = new OrderResponse();
-//
-//            dto.setOrderId(order.getId());
-//            dto.setNotes(order.getNotes());
-//
-//            dto.setPaymentMethod(paymentDTOs.getFirst().getPaymentMethod());
-//
-//            dto.setOrderDate(order.getOrderDate());
-//            dto.setStatus(order.getStatus());
-//
-//            dto.setOrderSource(order.getOrderSource());
-//            dto.setDownPayment(paymentDTOs.getFirst().getAmountPaid());
-//            dto.setDiscount(order.getDiscount());
-//            dto.setDelivery(order.getDeliveryCharge());
-//            dto.setTotalPrice(order.getTotalPrice());
-//
-//            // Map customer
-//            Customer customer = order.getCustomer();
-//            CustomerDto customerDTO = new CustomerDto();
-//            customerDTO.setCustomerId(customer.getId());
-//            customerDTO.setFullName(customer.getFullName());
-//            customerDTO.setGovernorate(customer.getGovernorate());
-//            customerDTO.setSecondaryPhone(customer.getSecondaryPhone());
-//            customerDTO.setCity(customer.getCity());
-//            customerDTO.setPhone(customer.getPhone());
-//            customerDTO.setAddress(customer.getAddress());
-//            dto.setCustomer(customerDTO);
-//
-//            // Map order items
-//            List<OrderItemDto> itemDTOs = order.getItems().stream().map(item -> {
-//                return new OrderItemDto(item.getProduct().getProductID(),
-//                        item.getProduct().getName(),
-//                        item.getQuantity(),
-//                        item.getUnitPrice()
-//                );
-//            }).collect(Collectors.toList());
-//
-//            dto.setOrderItems(itemDTOs);
-//
-//            return dto;
-//        }).collect(Collectors.toList());
-//    }
 
     public List<OrderResponse> getAllOrders(LocalDate userStart, LocalDate userEnd) {
 
@@ -314,7 +407,7 @@ public class OrderService {
             dto.setOrderSource(order.getOrderSource());
             dto.setDiscount(order.getDiscount());
             dto.setDelivery(order.getDeliveryCharge());
-            dto.setTotalPrice(order.getTotalPrice());
+            dto.setTotalPrice(BigDecimal.valueOf(order.getTotalPrice()));
 
             // Map customer
             Customer customer = order.getCustomer();
