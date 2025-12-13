@@ -6,6 +6,7 @@ import com.warsha.erp.dtos.*;
 import com.warsha.erp.entities.*;
 import com.warsha.erp.repository.OrderRepository;
 import com.warsha.erp.repository.ProductRepository;
+import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -131,9 +132,9 @@ public class OrderService {
     }
 
     @Transactional
-    public Order placeOrder(CreateOrderRequest request) {
+    public Order placeOrder(CreateOrderRequest request, Long customerId) {
         // 1. Fetch Customer
-        Customer customer = customerService.getCustomerByID(request.getCustomerId());
+        Customer customer = customerService.getCustomerByID(customerId);
 
         // 2. Extract IDs and Lock Products
         // We fetch all products in ONE query with a LOCK to prevent race conditions

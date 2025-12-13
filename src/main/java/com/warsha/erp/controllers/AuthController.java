@@ -1,7 +1,9 @@
 package com.warsha.erp.controllers;
 
 import com.warsha.erp.config.JwtUtil;
+import com.warsha.erp.entities.Customer;
 import com.warsha.erp.entities.User;
+import com.warsha.erp.services.CustomerService;
 import com.warsha.erp.services.UserService;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,7 +21,8 @@ public class AuthController {
     @Autowired private AuthenticationManager authManager;
     @Autowired private JwtUtil jwtUtil;
     @Autowired private UserService userService;
-
+    @Autowired private CustomerService customerService;
+    @Autowired private PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
@@ -27,11 +31,24 @@ public class AuthController {
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
 
-            String token = jwtUtil.generateToken(request.getUsername());
+            String token = jwtUtil.generateToken(request.getUsername(), "ADMIN");
             return ResponseEntity.ok(new LoginResponse(token));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
+    }
+
+    @PostMapping("/customerLogin")
+    public ResponseEntity<?> customerLogin(@RequestBody LoginRequest request) {
+        Customer customer = customerService.findByEmail(request.getUsername());
+
+        if (customer != null && passwordEncoder.matches(request.getPassword(), customer.getPassword())) {
+
+            String token = jwtUtil.generateToken(customer.getEmail(), "CUSTOMER");
+            return ResponseEntity.ok(new LoginResponse(token));
+        }
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid customer credentials");
     }
 
     @PostMapping("/register")

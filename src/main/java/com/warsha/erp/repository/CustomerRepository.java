@@ -7,9 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @Query("SELECT new com.warsha.erp.dtos.CustomerCountByGovernorate(c.governorate, COUNT(c)) FROM Customer c GROUP BY c.governorate ORDER BY COUNT(c) DESC")
     List<CustomerCountByGovernorate> countCustomersByGovernorate();
+
+    Optional<Customer> findByEmail(String email);
 }

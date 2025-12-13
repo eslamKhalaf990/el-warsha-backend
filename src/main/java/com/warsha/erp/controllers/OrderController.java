@@ -1,17 +1,20 @@
 package com.warsha.erp.controllers;
 
+import com.warsha.erp.config.CustomerUserDetails;
 import com.warsha.erp.dtos.CreateOrderRequest;
 import com.warsha.erp.dtos.OrderCountByGovernorateDto;
 import com.warsha.erp.dtos.OrderResponse;
 import com.warsha.erp.dtos.UpdateOrderStatus;
 import com.warsha.erp.entities.Order;
 import com.warsha.erp.services.OrderService;
+import io.jsonwebtoken.Jwt;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Slice;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -33,9 +36,17 @@ public class OrderController {
     }
 
     @PostMapping("/placeOrder")
-    public ResponseEntity<OrderResponse> placeOrder(@RequestBody CreateOrderRequest request) {
-        Order newOrder = orderService.placeOrder(request);
-        return ResponseEntity.ok(OrderResponse.fromEntity(newOrder));
+    public ResponseEntity<OrderResponse> placeOrder(
+            @RequestBody CreateOrderRequest request,
+            @AuthenticationPrincipal CustomerUserDetails userDetails) {
+
+        // 1. Extract Customer ID safely
+        Long customerId = userDetails.getId();
+
+        // 2. Pass ID to your business logic
+        Order order = orderService.placeOrder(request, customerId);
+
+        return ResponseEntity.ok(OrderResponse.fromEntity(order));
     }
 
     @GetMapping("/countGovernorates")

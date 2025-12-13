@@ -5,6 +5,7 @@ import com.warsha.erp.entities.Customer;
 import com.warsha.erp.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,8 +14,8 @@ import java.util.List;
 @Service
 public class CustomerService {
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    @Autowired private CustomerRepository customerRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
 
     public List<Customer> getAllCustomers() {
         return customerRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
@@ -24,6 +25,11 @@ public class CustomerService {
         return customerRepository.countCustomersByGovernorate();
     }
 
+    public Customer findByEmail(String email) {
+        return customerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+    }
+
     public Customer getCustomerByID(Long id) {
         return customerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
@@ -31,6 +37,7 @@ public class CustomerService {
 
     public Customer createCustomer(Customer customer) {
         customer.setCreatedAt(LocalDateTime.now());
+        customer.setPassword(passwordEncoder.encode(customer.getPassword()));
         return customerRepository.save(customer);
     }
 

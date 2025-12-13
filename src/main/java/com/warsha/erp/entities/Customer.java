@@ -35,9 +35,18 @@ public class Customer {
     @Column(name = "Address")
     private String address;
 
+    @Column(name = "Email")
+    private String email;
+
+    @Column(name = "Password")
+    private String password;
+
     @Column(name = "CreatedAt")
     private LocalDateTime createdAt;
 
     @Column(name = "UpdatedAt")
     private LocalDateTime updatedAt;
+
+    @Column(name = "Status")
+    private String status = "Active";
 }

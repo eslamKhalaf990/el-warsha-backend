@@ -13,17 +13,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final CustomUserDetailsService adminService;      // Renamed for clarity
+    private final CustomerDetailsService customerService;     // New service
 
-    private final CustomUserDetailsService userDetailsService;
-
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, CustomUserDetailsService userDetailsService) {
+    // Update Constructor
+    public JwtAuthenticationFilter(JwtUtil jwtUtil,
+                                   CustomUserDetailsService adminService,
+                                   CustomerDetailsService customerService) {
         this.jwtUtil = jwtUtil;
-        this.userDetailsService = userDetailsService;
+        this.adminService = adminService;
+        this.customerService = customerService;
     }
 
     @Override
@@ -41,27 +44,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 username = jwtUtil.extractUsername(jwtToken);
             } catch (Exception e) {
-                // invalid token format
-                logger.warn("Invalid JWT token: {}");
+                logger.warn("Invalid JWT token format");
             }
         }
 
-        // Proceed only if username exists and authentication not already set
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-            // VALIDATE TOKEN before trusting it
-            if (jwtUtil.validateToken(jwtToken, userDetails)) {
+            UserDetails userDetails = null;
+
+            // --- CHANGED LOGIC START ---
+            try {
+                // 1. Try loading as Admin
+                userDetails = adminService.loadUserByUsername(username);
+            } catch (Exception e) {
+                // 2. If not found, try loading as Customer
+                try {
+                    userDetails = customerService.loadUserByUsername(username);
+                } catch (Exception ex) {
+                    logger.error("User not found in either Admin or Customer tables: " + username);
+                }
+            }
+            // --- CHANGED LOGIC END ---
+
+            if (userDetails != null && jwtUtil.validateToken(jwtToken, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities());
 
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request));
-
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
-            } else {
-                logger.warn("JWT token validation failed for user " + username);
             }
         }
 
