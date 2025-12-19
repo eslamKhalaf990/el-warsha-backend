@@ -6,7 +6,6 @@ import com.warsha.erp.entities.User;
 import com.warsha.erp.services.CustomerService;
 import com.warsha.erp.services.UserService;
 import lombok.Getter;
-import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.authentication.*;
@@ -32,7 +31,7 @@ public class AuthController {
             );
 
             String token = jwtUtil.generateToken(request.getUsername(), "ADMIN");
-            return ResponseEntity.ok(new LoginResponse(token));
+            return ResponseEntity.ok(new ERPLogin(token));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
@@ -45,7 +44,7 @@ public class AuthController {
         if (customer != null && passwordEncoder.matches(request.getPassword(), customer.getPassword())) {
 
             String token = jwtUtil.generateToken(customer.getEmail(), "CUSTOMER");
-            return ResponseEntity.ok(new LoginResponse(token));
+            return ResponseEntity.ok(new CustomerLogin(token, customer.getAddress(), customer.getFullName(), customer.getPhone(), customer.getEmail()));
         }
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid customer credentials");
@@ -62,5 +61,9 @@ public class AuthController {
         private String password;
     }
 
-    record LoginResponse(String token) {}
+    record CustomerLogin(String token, String address, String name, String phone, String email) {
+    }
+
+    record ERPLogin(String token) {
+    }
 }
