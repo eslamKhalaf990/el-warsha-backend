@@ -131,6 +131,7 @@ public class OrderService {
         return savedOrder;
     }
 
+    // ECommerce Place Order
     @Transactional
     public Order placeOrder(CreateOrderRequest request, Long customerId) {
         // 1. Fetch Customer
@@ -154,7 +155,7 @@ public class OrderService {
         order.setOrderDate(LocalDate.now());
         order.setStatus("Pending");
         order.setOrderSource(request.getOrderSource());
-        order.setDeliveryCharge(request.getDelivery());
+        order.setDeliveryCharge(EgyptGovernorates.getDeliveryPrice(customer.getGovernorate()));
         order.setDiscount(request.getDiscount());
         order.setNotes(request.getNotes());
 

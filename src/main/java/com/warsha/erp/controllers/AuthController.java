@@ -42,9 +42,8 @@ public class AuthController {
         Customer customer = customerService.findByEmail(request.getUsername());
 
         if (customer != null && passwordEncoder.matches(request.getPassword(), customer.getPassword())) {
-
             String token = jwtUtil.generateToken(customer.getEmail(), "CUSTOMER");
-            return ResponseEntity.ok(new CustomerLogin(token, customer.getAddress(), customer.getFullName(), customer.getPhone(), customer.getEmail()));
+            return ResponseEntity.ok(new CustomerLogin(token, customer.getAddress(), customer.getFullName(), customer.getPhone(), customer.getEmail(), customer.getGovernorate()));
         }
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid customer credentials");
@@ -61,7 +60,7 @@ public class AuthController {
         private String password;
     }
 
-    record CustomerLogin(String token, String address, String name, String phone, String email) {
+    record CustomerLogin(String token, String address, String name, String phone, String email, String governorate) {
     }
 
     record ERPLogin(String token) {

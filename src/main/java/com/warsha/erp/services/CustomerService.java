@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -36,8 +35,19 @@ public class CustomerService {
     }
 
     public Customer createCustomer(Customer customer) {
+
+        // 2. Set timestamps
         customer.setCreatedAt(LocalDateTime.now());
-        customer.setPassword(passwordEncoder.encode(customer.getPassword()));
+
+        // 3. Encode Password
+        if (customer.getPassword() != null) {
+            customer.setPassword(passwordEncoder.encode(customer.getPassword()));
+            if (!EgyptGovernorates.isValid(customer.getGovernorate())) {
+                throw new IllegalArgumentException("Invalid governorate provided: " + customer.getGovernorate());
+            }
+        }
+
+        // 4. Save
         return customerRepository.save(customer);
     }
 
@@ -59,3 +69,4 @@ public class CustomerService {
         customerRepository.deleteAll();
     }
 }
+
