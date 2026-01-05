@@ -35,6 +35,8 @@ public class OrderService {
     private final CustomerService customerService;
     private final ProductService productService;
     private final InvoiceService invoiceService;
+    private final EmailService emailService;
+
     private final PaymentService paymentService;
     private final BankTransactionService bankTransactionService;
 
@@ -42,13 +44,14 @@ public class OrderService {
     public OrderService(OrderRepository orderRepo, ProductRepository productRepository,
                         CustomerService customerService,
                         ProductService productService,
-                        InvoiceService invoiceService,
+                        InvoiceService invoiceService, EmailService emailService,
                         PaymentService paymentService, BankTransactionService bankTransactionService) {
         this.orderRepository = orderRepo;
         this.productRepository = productRepository;
         this.customerService = customerService;
         this.productService = productService;
         this.invoiceService = invoiceService;
+        this.emailService = emailService;
         this.paymentService = paymentService;
         this.bankTransactionService = bankTransactionService;
     }
@@ -64,8 +67,9 @@ public class OrderService {
         order.setStatus("Pending");
         order.setOrderSource(request.getOrderSource());
         order.setDeliveryCharge(request.getDelivery());
+
         // todo: you can't let the client send the unit prices
-        order.setTotalPrice(request.calculateTotalPrice());
+        order.setTotalPrice(request.calculateTotalPriceERP());
         order.setDiscount(request.getDiscount());
         order.setNotes(request.getNotes());
 
@@ -219,8 +223,8 @@ public class OrderService {
 
         // 6. Finalize Order
         // Calculate final total: (Sum of Items + Delivery) - Discount
-        BigDecimal finalTotal = calculatedTotal.add(BigDecimal.valueOf(request.getDelivery()));
-        finalTotal = finalTotal.subtract(BigDecimal.valueOf(request.getDiscount()));
+        BigDecimal finalTotal = calculatedTotal.add(BigDecimal.valueOf(EgyptGovernorates.getDeliveryPrice(customer.getGovernorate())));
+        finalTotal = finalTotal.subtract(BigDecimal.valueOf(request.getDownPayment()));
 
         order.setTotalPrice(finalTotal.doubleValue());
         order.setItems(orderItemsList);
@@ -230,6 +234,8 @@ public class OrderService {
         // 7. Handle Integrations (Invoice / Payment)
         // Extracted to keep the main logic clean
         processPostOrderIntegrations(request, savedOrder);
+
+        emailService.sendNewOrderNotification(customer.getFullName(), savedOrder.getId().toString(), savedOrder.getTotalPrice());
 
         return savedOrder;
     }
@@ -243,7 +249,7 @@ public class OrderService {
         final long EGYPT_POST_BANK_ID = 3L;
         final BigDecimal POST_FEE = BigDecimal.valueOf(5);
 
-        BigDecimal depositAmount = BigDecimal.valueOf(request.getDownPayment());
+        BigDecimal depositAmount = BigDecimal.valueOf(savedOrder.getTotalPrice() + (request.getDownPayment()));
 
         if (request.getBankAccountId() != null && request.getBankAccountId() == EGYPT_POST_BANK_ID) {
             depositAmount = depositAmount.subtract(POST_FEE);
@@ -281,7 +287,7 @@ public class OrderService {
         existingOrder.setDeliveryCharge(request.getDelivery());
         existingOrder.setDiscount(request.getDiscount());
         existingOrder.setNotes(request.getNotes());
-        existingOrder.setTotalPrice(request.calculateTotalPrice());
+        existingOrder.setTotalPrice(request.calculateTotalPriceERP());
 
         // 3. Revert previous product quantities
         for (OrderItems item : existingOrder.getItems()) {
@@ -426,19 +432,78 @@ public class OrderService {
             }
 
             // Map order items
-            List<OrderItemDto> itemDTOs = order.getItems().stream().map(item -> {
-                return new OrderItemDto(
-                        item.getProduct().getProductID(),
-                        item.getProduct().getName(),
-                        item.getQuantity(),
-                        item.getUnitPrice()
-                );
-            }).collect(Collectors.toList());
+            List<OrderItemDto> itemDTOs = order.getItems().stream().map(item -> new OrderItemDto(
+                    item.getProduct().getProductID(),
+                    item.getProduct().getName(),
+                    item.getQuantity(),
+                    item.getUnitPrice()
+            )).collect(Collectors.toList());
 
             dto.setOrderItems(itemDTOs);
 
             return dto;
         }).collect(Collectors.toList());
+    }
+
+    public List<OrderResponse> getOrdersByCustomer(Long customerId) {
+
+        // 1. Fetch from Repo
+        List<Order> orders = orderRepository.findByCustomerId(
+                customerId,
+                Sort.by(Sort.Direction.DESC, "id")
+        );
+
+        // 2. Map the list using the helper method
+        return orders.stream()
+                .map(this::convertToOrderResponse)
+                .collect(Collectors.toList());
+    }
+
+    /** * Reusable helper to map Order Entity to OrderResponse DTO
+     */
+    private OrderResponse convertToOrderResponse(Order order) {
+        // WARNING: Be careful of the N+1 issue here (one call per order)
+        List<PaymentDto> paymentDTOs = paymentService.getPaymentsByOrder(order.getId());
+
+        OrderResponse dto = new OrderResponse();
+        dto.setOrderId(order.getId());
+        dto.setNotes(order.getNotes());
+
+        if (!paymentDTOs.isEmpty()) {
+            dto.setPaymentMethod(paymentDTOs.getFirst().getPaymentMethod());
+            dto.setDownPayment(paymentDTOs.getFirst().getAmountPaid());
+        }
+
+        dto.setOrderDate(order.getOrderDate());
+        dto.setStatus(order.getStatus());
+        dto.setOrderSource(order.getOrderSource());
+        dto.setDiscount(order.getDiscount());
+        dto.setDelivery(order.getDeliveryCharge());
+        dto.setTotalPrice(BigDecimal.valueOf(order.getTotalPrice()));
+
+        // Map customer
+        Customer customer = order.getCustomer();
+        if (customer != null) {
+            CustomerDto customerDTO = new CustomerDto();
+            customerDTO.setCustomerId(customer.getId());
+            customerDTO.setFullName(customer.getFullName());
+            customerDTO.setGovernorate(customer.getGovernorate());
+            customerDTO.setPhone(customer.getPhone());
+            customerDTO.setAddress(customer.getAddress());
+            dto.setCustomer(customerDTO);
+        }
+
+        // Map order items
+        List<OrderItemDto> itemDTOs = order.getItems().stream().map(item -> new OrderItemDto(
+                item.getProduct().getProductID(),
+                item.getProduct().getName(),
+                item.getQuantity(),
+                item.getUnitPrice()
+        )).collect(Collectors.toList());
+
+        dto.setOrderItems(itemDTOs);
+
+        return dto;
     }
 
     @Transactional

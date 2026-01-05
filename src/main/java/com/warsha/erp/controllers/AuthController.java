@@ -4,6 +4,7 @@ import com.warsha.erp.config.JwtUtil;
 import com.warsha.erp.entities.Customer;
 import com.warsha.erp.entities.User;
 import com.warsha.erp.services.CustomerService;
+import com.warsha.erp.services.EmailService;
 import com.warsha.erp.services.UserService;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,7 @@ public class AuthController {
 
     @Autowired private AuthenticationManager authManager;
     @Autowired private JwtUtil jwtUtil;
+    @Autowired private EmailService emailService;
     @Autowired private UserService userService;
     @Autowired private CustomerService customerService;
     @Autowired private PasswordEncoder passwordEncoder;

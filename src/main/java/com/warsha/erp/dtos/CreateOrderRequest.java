@@ -22,6 +22,7 @@ public class CreateOrderRequest {
     private double totalPrice;
     private double delivery;
     private double discount;
+    private String promoCode;
 
     public double getItemsTotalPrice() {
         if (items == null || items.isEmpty()) {
@@ -33,9 +34,15 @@ public class CreateOrderRequest {
                 .sum();
     }
 
-    public double calculateTotalPrice() {
+    public double calculateTotalPriceERP() {
         double itemsTotal = getItemsTotalPrice();
         this.totalPrice = itemsTotal + delivery - discount - downPayment;
+        return this.totalPrice;
+    }
+
+    public double calculateTotalPriceEcommerce() {
+        double itemsTotal = getItemsTotalPrice();
+        this.totalPrice = itemsTotal - discount - downPayment;
         return this.totalPrice;
     }
 }

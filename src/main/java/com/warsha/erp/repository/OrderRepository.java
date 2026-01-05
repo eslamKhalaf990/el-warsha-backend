@@ -17,4 +17,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<OrderCountByGovernorateDto> countOrdersByGovernorate();
 
     List<Order> findByOrderDateBetween(LocalDate start, LocalDate end, Sort sort);
+
+    List<Order> findByCustomerId(Long customerId, Sort sort);
 }

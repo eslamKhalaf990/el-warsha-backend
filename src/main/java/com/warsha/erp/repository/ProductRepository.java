@@ -12,7 +12,7 @@ import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    @Query("SELECT p FROM Product p WHERE p.deleted IS NULL OR p.deleted <> 'true' ORDER BY p.id DESC")
+    @Query("SELECT p FROM Product p WHERE p.deleted IS NULL OR p.deleted <> 'true' ORDER BY p.Sold DESC")
     List<Product> findAllNotDeleted();
 
     @Query("SELECT p FROM Product p WHERE p.Category.CategoryId = :categoryId AND (p.deleted IS NULL OR p.deleted <> 'true') ORDER BY p.ProductID DESC")

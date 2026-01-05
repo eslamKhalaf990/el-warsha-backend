@@ -49,7 +49,7 @@ public interface CashFlowRepository extends CrudRepository<Order, Long> {
         GROUP BY
             p.ProductID, p.Name
         ORDER BY
-            TotalSoldForMonth DESC
+            TotalProfitGenerated DESC
         """, nativeQuery = true)
     List<Object[]> getTop5SoldProductsForMonth(@Param("targetDate") Date targetDate);
 }

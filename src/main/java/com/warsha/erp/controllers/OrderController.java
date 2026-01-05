@@ -77,6 +77,14 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getAllOrders(startDate, endDate));
     }
 
+    @GetMapping("/customer")
+    public ResponseEntity<List<OrderResponse>> getAllOrdersByCustomerId(
+            @AuthenticationPrincipal CustomerUserDetails userDetails
+    ) {
+        Long customerId = userDetails.getId();
+        return ResponseEntity.ok(orderService.getOrdersByCustomer(customerId));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
         orderService.deleteOrder(id);

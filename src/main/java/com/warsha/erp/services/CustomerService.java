@@ -14,6 +14,7 @@ import java.util.List;
 public class CustomerService {
 
     @Autowired private CustomerRepository customerRepository;
+    @Autowired private EmailService emailService;
     @Autowired private PasswordEncoder passwordEncoder;
 
     public List<Customer> getAllCustomers() {
