@@ -2,6 +2,7 @@ package com.warsha.erp.dtos;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -23,6 +24,7 @@ public class CreateOrderRequest {
     private double delivery;
     private double discount;
     private String promoCode;
+    private List<MultipartFile> images;
 
     public double getItemsTotalPrice() {
         if (items == null || items.isEmpty()) {

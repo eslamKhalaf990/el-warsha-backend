@@ -15,7 +15,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -137,7 +139,7 @@ public class OrderService {
 
     // ECommerce Place Order
     @Transactional
-    public Order placeOrder(CreateOrderRequest request, Long customerId) {
+    public Order placeOrder(CreateOrderRequest request, Long customerId, List<MultipartFile> images) {
         // 1. Fetch Customer
         Customer customer = customerService.getCustomerByID(customerId);
 
@@ -234,8 +236,13 @@ public class OrderService {
         // 7. Handle Integrations (Invoice / Payment)
         // Extracted to keep the main logic clean
         processPostOrderIntegrations(request, savedOrder);
+        List<String> attachments = new ArrayList<>();
+        try {
+           attachments = emailService.saveImagesToTemp(images);
+        } catch (IOException ignored) {
 
-        emailService.sendNewOrderNotification(customer.getFullName(), savedOrder.getId().toString(), savedOrder.getTotalPrice());
+        }
+        emailService.sendNewOrderNotification(customer.getFullName(), savedOrder.getId().toString(), savedOrder.getTotalPrice(), attachments);
 
         return savedOrder;
     }

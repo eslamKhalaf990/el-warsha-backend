@@ -75,7 +75,7 @@ public class SecurityConfig {
                 // Explicitly enable CORS to use your CorsConfig bean
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/api/files/**", "/invoice/pdf/**", "/status", "/products", "/category", "/customers").permitAll()
+                        .requestMatchers("/auth/**", "/api/files/**", "/invoice/pdf/**", "/status", "/products", "/category", "/customers/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
                 )

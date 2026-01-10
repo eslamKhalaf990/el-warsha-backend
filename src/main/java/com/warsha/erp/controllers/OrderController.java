@@ -10,9 +10,11 @@ import com.warsha.erp.services.OrderService;
 import io.jsonwebtoken.Jwt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.time.LocalDate;
@@ -35,16 +37,20 @@ public class OrderController {
         return ResponseEntity.ok(OrderResponse.fromEntity(newOrder));
     }
 
-    @PostMapping("/placeOrder")
+    @PostMapping(value = "/placeOrder", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<OrderResponse> placeOrder(
-            @RequestBody CreateOrderRequest request,
+            // 1. Receive the JSON data
+            @RequestPart("order") CreateOrderRequest request,
+
+            // 2. Receive the Files (Optional)
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+
             @AuthenticationPrincipal CustomerUserDetails userDetails) {
 
-        // 1. Extract Customer ID safely
         Long customerId = userDetails.getId();
 
-        // 2. Pass ID to your business logic
-        Order order = orderService.placeOrder(request, customerId);
+        // 3. Pass images to the service
+        Order order = orderService.placeOrder(request, customerId, images);
 
         return ResponseEntity.ok(OrderResponse.fromEntity(order));
     }
