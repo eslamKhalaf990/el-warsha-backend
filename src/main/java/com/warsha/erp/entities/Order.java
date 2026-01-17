@@ -53,4 +53,20 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<OrderItems> items;
+
+    @Override
+    public String toString() {
+        return "Order{" +
+                "id=" + id +
+                ", orderDate=" + orderDate +
+                ", status='" + status + '\'' +
+                ", OrderSource='" + OrderSource + '\'' +
+                ", Discount=" + Discount +
+                ", TotalPrice=" + TotalPrice +
+                ", DeliveryCharge=" + DeliveryCharge +
+                ", Notes='" + Notes + '\'' +
+                ", customer=" + (customer != null ? customer.getId() : null) +
+                ", invoice=" + (invoice != null ? invoice.getId() : null) +
+                '}';
+    }
 }

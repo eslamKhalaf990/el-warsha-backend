@@ -176,7 +176,7 @@ public class InvoiceService {
             PdfPCell descCell = createArabicCell(item.getProduct().getDescription(), normalFont);
 
             // Unit Price (right-aligned)
-            PdfPCell priceCell = createArabicCell(String.valueOf(item.getProduct().getSellingPrice()), normalFont);
+            PdfPCell priceCell = createArabicCell(String.valueOf(item.getProduct().getSellingPrice() - item.getProduct().getDiscount()), normalFont);
 
             // Quantity (right-aligned)
             PdfPCell qtyCell = createArabicCell(String.valueOf(item.getQuantity()), normalFont);

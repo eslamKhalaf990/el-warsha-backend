@@ -18,6 +18,8 @@ public class ProductDTO {
     private String description;
     private Double buyingPrice;
     private Double sellingPrice;
+    private Double discount;
+    private Double totalPrice;
     private String imageUrl;
     private String sku;
     private String quantity;

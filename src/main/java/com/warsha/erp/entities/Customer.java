@@ -49,4 +49,21 @@ public class Customer {
 
     @Column(name = "Status")
     private String status = "Active";
+
+    @Override
+    public String toString() {
+        return "Customer{" +
+                "id=" + id +
+                ", fullName='" + fullName + '\'' +
+                ", governorate='" + governorate + '\'' +
+                ", phone='" + phone + '\'' +
+                ", city='" + city + '\'' +
+                ", secondaryPhone='" + secondaryPhone + '\'' +
+                ", address='" + address + '\'' +
+                ", email='" + email + '\'' +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                ", status='" + status + '\'' +
+                '}';
+    }
 }

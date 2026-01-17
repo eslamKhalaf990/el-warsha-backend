@@ -57,6 +57,7 @@ public class OrderService {
         this.paymentService = paymentService;
         this.bankTransactionService = bankTransactionService;
     }
+
     // ERP Place Order
     @Transactional
     public Order createOrder(CreateOrderRequest request) {
@@ -197,7 +198,7 @@ public class OrderService {
 
             // E. Secure Price Calculation (Use DB Price, convert Double to BigDecimal)
             // We use BigDecimal for money math to avoid floating point errors (e.g. 0.1 + 0.2 = 0.3000004)
-            BigDecimal unitPrice = BigDecimal.valueOf(product.getSellingPrice());
+            BigDecimal unitPrice = BigDecimal.valueOf(product.getSellingPrice() - product.getDiscount());
             BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             calculatedTotal = calculatedTotal.add(lineTotal);
 
@@ -233,8 +234,8 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // 7. Handle Integrations (Invoice / Payment)
-        // Extracted to keep the main logic clean
+        System.out.println(savedOrder);
+
         processPostOrderIntegrations(request, savedOrder);
         List<String> attachments = new ArrayList<>();
         try {

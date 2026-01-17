@@ -30,6 +30,9 @@ public class Product {
     @Column(name = "SellingPrice")
     private Double SellingPrice;
 
+    @Column(name = "Discount")
+    private Double Discount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Category", nullable = false)
     private Category Category;

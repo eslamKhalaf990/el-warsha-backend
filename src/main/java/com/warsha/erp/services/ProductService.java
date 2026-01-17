@@ -44,6 +44,8 @@ public class ProductService {
                     dto.setDescription(product.getDescription());
                     dto.setBuyingPrice(product.getBuyingPrice());
                     dto.setSellingPrice(product.getSellingPrice());
+                    dto.setDiscount(product.getDiscount());
+                    dto.setTotalPrice(product.getSellingPrice() - product.getDiscount());
                     dto.setImageUrl(product.getImageUrl());
                     dto.setSku(product.getSku());
                     dto.setQuantity(product.getQuantity());
@@ -127,6 +129,7 @@ public class ProductService {
         existing.setDescription(updatedProduct.getDescription());
         existing.setBuyingPrice(updatedProduct.getBuyingPrice());
         existing.setSellingPrice(updatedProduct.getSellingPrice());
+        existing.setDiscount(updatedProduct.getDiscount());
         existing.setQuantity(updatedProduct.getQuantity());
         existing.setCategory(updatedProduct.getCategory());
         existing.setUpdatedAt(LocalDateTime.now());
@@ -140,6 +143,7 @@ public class ProductService {
         existing.setDescription(updatedProduct.getDescription());
         existing.setBuyingPrice(updatedProduct.getBuyingPrice());
         existing.setSellingPrice(updatedProduct.getSellingPrice());
+        existing.setDiscount(updatedProduct.getDiscount());
         existing.setQuantity(updatedProduct.getQuantity());
         existing.setCategory(updatedProduct.getCategory());
         existing.setUpdatedAt(LocalDateTime.now());

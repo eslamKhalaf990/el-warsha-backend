@@ -47,7 +47,7 @@ public class CustomerService {
                 throw new IllegalArgumentException("Invalid governorate provided: " + customer.getGovernorate());
             }
         }
-
+        System.out.println(customer);
         // 4. Save
         return customerRepository.save(customer);
     }
