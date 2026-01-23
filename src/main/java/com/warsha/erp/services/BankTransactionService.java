@@ -13,10 +13,12 @@ import com.warsha.erp.repository.TransactionCategoryRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class BankTransactionService {
@@ -26,6 +28,9 @@ public class BankTransactionService {
 
     @Autowired
     private BankAccountRepository bankAccountRepository;
+
+    @Autowired private PasswordEncoder passwordEncoder;
+
 
     @Autowired
     private TransactionCategoryRepository categoryRepository;
@@ -82,8 +87,44 @@ public class BankTransactionService {
                 toList();
     }
 
-    public List<BankAccountDTO> getAllAccounts() {
-        return bankAccountRepository.findAllAccounts();
+    public List<BankAccountDTO> getAllAccounts(String passwordForOwnerSafe) {
+        // 1. Try to find the Safe Account in the DB
+        Optional<BankAccount> safeAccountOpt = bankAccountRepository.findFirstByIsOwnerSafeTrue();
+
+        if (safeAccountOpt.isPresent()) {
+            BankAccount safeAccount = safeAccountOpt.get();
+            String storedHash = safeAccount.getHashedPassword();
+
+            // -----------------------------------------------------------
+            // SCENARIO 1: Password is NOT set in DB yet (First Time Setup)
+            // -----------------------------------------------------------
+            if (storedHash == null) {
+                // Only set it if the user actually sent a password (not null/empty)
+                if (passwordForOwnerSafe != null && !passwordForOwnerSafe.isBlank()) {
+
+                    safeAccount.setHashedPassword(passwordEncoder.encode(passwordForOwnerSafe));
+                    bankAccountRepository.save(safeAccount);
+
+                    // UX IMPROVEMENT: Return all accounts immediately so the user confirms it worked
+                    return bankAccountRepository.findAllAccounts();
+                }
+            }
+
+            // -----------------------------------------------------------
+            // SCENARIO 2: Password IS set in DB (Regular Check)
+            // -----------------------------------------------------------
+            else {
+                if (passwordForOwnerSafe != null &&
+                        passwordEncoder.matches(passwordForOwnerSafe, storedHash)) {
+
+                    // AUTHENTICATED: Return ALL accounts
+                    return bankAccountRepository.findAllAccounts();
+                }
+            }
+        }
+
+        // Default: Show only regular accounts
+        return bankAccountRepository.findAvailableAccounts();
     }
 
     @Transactional

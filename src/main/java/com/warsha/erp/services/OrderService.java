@@ -257,7 +257,7 @@ public class OrderService {
         final long EGYPT_POST_BANK_ID = 3L;
         final BigDecimal POST_FEE = BigDecimal.valueOf(5);
 
-        BigDecimal depositAmount = BigDecimal.valueOf(savedOrder.getTotalPrice() + (request.getDownPayment()));
+        BigDecimal depositAmount = BigDecimal.valueOf(request.getDownPayment());
 
         if (request.getBankAccountId() != null && request.getBankAccountId() == EGYPT_POST_BANK_ID) {
             depositAmount = depositAmount.subtract(POST_FEE);
@@ -277,7 +277,7 @@ public class OrderService {
         // Payment Record
         CreatePaymentRequest payReq = new CreatePaymentRequest();
         payReq.setOrderId(savedOrder.getId());
-        payReq.setAmountPaid(request.getDownPayment()); // User pays full amount
+        payReq.setAmountPaid(request.getDownPayment());
         payReq.setPaymentMethod(request.getPaymentMethod());
         payReq.setPaymentStatus("Completed");
         paymentService.createPayment(payReq);

@@ -47,8 +47,13 @@ public class BankTransactionController {
     }
 
     @GetMapping("/accounts")
-    public ResponseEntity<List<BankAccountDTO>> getAllAccounts() {
-        List<BankAccountDTO> accounts = transactionService.getAllAccounts();
+    public ResponseEntity<List<BankAccountDTO>> getAllAccounts(
+            @RequestParam(name = "password", required = false) String password) {
+
+        // If password is null, service returns regular accounts
+        // If password is correct, service returns all accounts
+        List<BankAccountDTO> accounts = transactionService.getAllAccounts(password);
+
         return ResponseEntity.ok(accounts);
     }
 

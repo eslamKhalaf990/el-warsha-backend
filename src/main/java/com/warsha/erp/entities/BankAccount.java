@@ -28,4 +28,10 @@ public class BankAccount {
 
     @Column(name = "CreatedAt")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "IsOwnerSafe")
+    private boolean isOwnerSafe = false;
+
+    @Column(name = "HashedPassword")
+    private String hashedPassword;
 }
