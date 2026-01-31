@@ -26,11 +26,13 @@ public class CustomerService {
     }
 
     public Customer findByEmail(String email) {
+        System.out.println(email);
         return customerRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
     }
 
     public Customer getCustomerByID(Long id) {
+        System.out.println(id);
         return customerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
     }

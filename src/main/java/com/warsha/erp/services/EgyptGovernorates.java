@@ -26,6 +26,8 @@ public class EgyptGovernorates {
         SHIPPING_RATES.put("الفيوم", 65.0);
         SHIPPING_RATES.put("بني سويف", 65.0);
         SHIPPING_RATES.put("المنيا", 65.0);
+        SHIPPING_RATES.put("دمياط", 65.0);
+        SHIPPING_RATES.put("دمياط الجديدة", 65.0);
 
         // --- Zone 3: Middle Upper Egypt & Sinai (80 EGP) ---
         SHIPPING_RATES.put("أسيوط", 80.0);
