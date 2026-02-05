@@ -15,6 +15,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -23,7 +26,9 @@ public class SecurityConfig {
     private final CustomerDetailsService customerService;
     private final JwtAuthenticationFilter jwtFilter;
 
-    // Inject services via constructor
+    // Formatter for consistent log timestamps
+    private final DateTimeFormatter logFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+
     public SecurityConfig(CustomUserDetailsService adminService,
                           CustomerDetailsService customerService,
                           JwtAuthenticationFilter jwtFilter) {
@@ -32,47 +37,54 @@ public class SecurityConfig {
         this.jwtFilter = jwtFilter;
     }
 
+    private String getTimestamp() {
+        return LocalDateTime.now().format(logFormat);
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // --- GUARD 1: The Admin Provider ---
     @Bean
     public AuthenticationProvider adminAuthenticationProvider() {
+        System.out.println("[" + getTimestamp() + "] CONFIG: Initializing Admin Authentication Provider");
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(adminService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
 
-    // --- GUARD 2: The Customer Provider ---
     @Bean
     public AuthenticationProvider customerAuthenticationProvider() {
+        System.out.println("[" + getTimestamp() + "] CONFIG: Initializing Customer Authentication Provider");
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(customerService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
 
-    // --- MANAGER: Manages both guards ---
     @Bean
     public AuthenticationManager authManager(HttpSecurity http) throws Exception {
+        System.out.println("[" + getTimestamp() + "] CONFIG: Building Authentication Manager with dual providers");
         AuthenticationManagerBuilder authenticationManagerBuilder =
                 http.getSharedObject(AuthenticationManagerBuilder.class);
 
-        // Register both providers. Spring will try them in order.
+        // Register both providers
         authenticationManagerBuilder.authenticationProvider(adminAuthenticationProvider());
         authenticationManagerBuilder.authenticationProvider(customerAuthenticationProvider());
 
-        return authenticationManagerBuilder.build();
+        AuthenticationManager manager = authenticationManagerBuilder.build();
+        System.out.println("[" + getTimestamp() + "] SUCCESS: Authentication Manager ready");
+        return manager;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        System.out.println("[" + getTimestamp() + "] CONFIG: Configuring Security Filter Chain...");
+
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                // Explicitly enable CORS to use your CorsConfig bean
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/api/files/**", "/invoice/pdf/**", "/status", "/products", "/category", "/customers/**").permitAll()
@@ -82,6 +94,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
+        System.out.println("[" + getTimestamp() + "] SUCCESS: Security Filter Chain applied.");
         return http.build();
     }
 }

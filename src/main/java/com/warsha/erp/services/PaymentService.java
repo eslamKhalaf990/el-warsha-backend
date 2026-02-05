@@ -9,6 +9,7 @@ import com.warsha.erp.repository.PaymentRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,14 +18,26 @@ public class PaymentService {
     private final PaymentRepository paymentRepo;
     private final OrderRepository orderRepo;
 
+    // Formatter for consistent log timestamps
+    private final DateTimeFormatter logFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+
     public PaymentService(PaymentRepository paymentRepo, OrderRepository orderRepo) {
         this.paymentRepo = paymentRepo;
         this.orderRepo = orderRepo;
     }
 
+    private String getTimestamp() {
+        return LocalDateTime.now().format(logFormat);
+    }
+
     public PaymentDto createPayment(CreatePaymentRequest request) {
+        System.out.println("[" + getTimestamp() + "] INFO: Creating payment for Order ID: " + request.getOrderId());
+
         Order order = orderRepo.findById(request.getOrderId())
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> {
+                    System.out.println("[" + getTimestamp() + "] ERROR: Order not found for ID: " + request.getOrderId());
+                    return new RuntimeException("Order not found");
+                });
 
         Payment payment = new Payment();
         payment.setOrder(order);
@@ -34,37 +47,48 @@ public class PaymentService {
         payment.setPaymentDate(LocalDateTime.now());
 
         paymentRepo.save(payment);
+        System.out.println("[" + getTimestamp() + "] SUCCESS: Payment record saved (Amount: " + payment.getAmountPaid() + ")");
+
         return new PaymentDto(payment);
     }
 
     public List<PaymentDto> getAllPayments() {
+        System.out.println("[" + getTimestamp() + "] INFO: Fetching all payment records");
         return paymentRepo.findAll().stream()
                 .map(PaymentDto::new)
                 .collect(Collectors.toList());
     }
 
     public List<PaymentDto> getPaymentsByOrder(Long orderId) {
+        System.out.println("[" + getTimestamp() + "] INFO: Retrieving payments for Order ID: " + orderId);
         return paymentRepo.findByOrderId(orderId).stream()
                 .map(PaymentDto::new)
                 .collect(Collectors.toList());
     }
 
     public void deletePaymentsByOrderId(Long orderId) {
+        System.out.println("[" + getTimestamp() + "] WARN: Deleting all payments for Order ID: " + orderId);
         List<Payment> payments = paymentRepo.findByOrderId(orderId);
 
         if (payments != null && !payments.isEmpty()) {
             paymentRepo.deleteAll(payments);
+            System.out.println("[" + getTimestamp() + "] SUCCESS: Deleted " + payments.size() + " payment records.");
+        } else {
+            System.out.println("[" + getTimestamp() + "] INFO: No payments found to delete for Order ID: " + orderId);
         }
     }
 
     public void cancelPaymentsByOrderId(Long orderId) {
+        System.out.println("[" + getTimestamp() + "] WARN: Cancelling payments for Order ID: " + orderId);
 
-        List<Payment> payments = paymentRepo.findByOrderId(orderId); // Assuming you have this method
+        List<Payment> payments = paymentRepo.findByOrderId(orderId);
 
         for (Payment payment : payments) {
-
+            System.out.println("[" + getTimestamp() + "] INFO: Marking Payment ID " + payment.getId() + " as Cancelled");
             payment.setPaymentStatus("Cancelled");
             paymentRepo.save(payment);
         }
+
+        System.out.println("[" + getTimestamp() + "] SUCCESS: All payments for Order #" + orderId + " updated to Cancelled.");
     }
 }

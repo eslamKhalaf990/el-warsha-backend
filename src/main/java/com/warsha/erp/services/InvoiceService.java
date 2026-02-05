@@ -5,6 +5,7 @@ import com.lowagie.text.Font;
 import com.lowagie.text.Image;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.*;
+import com.warsha.erp.dtos.PaymentDto;
 import com.warsha.erp.entities.Invoice;
 import com.warsha.erp.entities.Order;
 import com.warsha.erp.entities.OrderItems;
@@ -182,7 +183,7 @@ public class InvoiceService {
             PdfPCell qtyCell = createArabicCell(String.valueOf(item.getQuantity()), normalFont);
 
             // Total (right-aligned)
-            double total = item.getQuantity() * item.getProduct().getSellingPrice();
+            double total = item.getQuantity() * (item.getProduct().getSellingPrice() - item.getProduct().getDiscount());
             PdfPCell totalCell = createArabicCell(String.valueOf(total), normalFont);
 
             // Add cells to the table in the correct order (left to right)
@@ -250,21 +251,48 @@ public class InvoiceService {
         innerTable.setWidthPercentage(100);
         innerTable.setWidths(new float[]{1.5f, 2f}); // Adjust widths as needed
 
-        // Add rows to the inner table using the helper
-        addTotalRow(innerTable,"المجموع", String.valueOf(
-                invoice.getOrder().getTotalPrice() +
-                invoice.getOrder().getDiscount() - invoice.getOrder().getDeliveryCharge() +
-                paymentService.getPaymentsByOrder(invoice.getOrder().getId()).getFirst().getAmountPaid()
-        ), smallBoldFont, smallBoldFont);
-        addTotalRow(innerTable, "رسوم الشحن", String.valueOf(invoice.getOrder().getDeliveryCharge()), smallBoldFont, smallBoldFont);
-        addTotalRow(innerTable, "الخصم", String.valueOf(invoice.getOrder().getDiscount()), smallBoldFont, smallBoldFont);
+//        // Add rows to the inner table using the helper
+//        addTotalRow(innerTable,"المجموع", String.valueOf(
+//                invoice.getOrder().getTotalPrice() +
+//                invoice.getOrder().getDiscount() - invoice.getOrder().getDeliveryCharge() +
+//                paymentService.getPaymentsByOrder(invoice.getOrder().getId()).getFirst().getAmountPaid()
+//        ), smallBoldFont, smallBoldFont);
+//        addTotalRow(innerTable, "رسوم الشحن", String.valueOf(invoice.getOrder().getDeliveryCharge()), smallBoldFont, smallBoldFont);
+//        addTotalRow(innerTable, "الخصم", String.valueOf(invoice.getOrder().getDiscount()), smallBoldFont, smallBoldFont);
+//
+//        addTotalRow(innerTable,"الاجمالي", String.valueOf((invoice.getOrder().getTotalPrice()
+//               + paymentService.getPaymentsByOrder(invoice.getOrder().getId()).getFirst().getAmountPaid()
+//
+//        )), smallBoldFont, smallBoldFont);
+//        addTotalRow(innerTable, "مدفوع مسبقا", String.valueOf(paymentService.getPaymentsByOrder(invoice.getOrder().getId()).getFirst().getAmountPaid() * -1), smallBoldFont, smallBoldFont);
+//        addTotalRow(innerTable, "المبلغ المتبقي", String.valueOf(invoice.getOrder().getTotalPrice()), smallBoldFont, smallBoldFont);
 
-        addTotalRow(innerTable,"الاجمالي", String.valueOf((invoice.getOrder().getTotalPrice()
-               + paymentService.getPaymentsByOrder(invoice.getOrder().getId()).getFirst().getAmountPaid()
 
-        )), smallBoldFont, smallBoldFont);
-        addTotalRow(innerTable, "مدفوع مسبقا", String.valueOf(paymentService.getPaymentsByOrder(invoice.getOrder().getId()).getFirst().getAmountPaid() * -1), smallBoldFont, smallBoldFont);
-        addTotalRow(innerTable, "المبلغ المتبقي", String.valueOf(invoice.getOrder().getTotalPrice()), smallBoldFont, smallBoldFont);
+        // 1. Fetch the payment once and log it manually since we are using the variable now
+        List<PaymentDto> payments = paymentService.getPaymentsByOrder(invoice.getOrder().getId());
+        double downPayment = 0;
+
+        if (payments != null && !payments.isEmpty()) {
+            downPayment = payments.getFirst().getAmountPaid();
+        }
+
+        // 2. Pre-calculate values to keep the table logic clean
+        double totalPrice = invoice.getOrder().getTotalPrice();
+        double discount = invoice.getOrder().getDiscount();
+        double delivery = invoice.getOrder().getDeliveryCharge();
+
+        // Subtotal calculation: (Final + Discount - Delivery + Downpayment)
+        double subTotal = totalPrice + discount - delivery + downPayment;
+        double totalWithDownPayment = totalPrice + downPayment;
+
+        // 3. Add rows to the inner table using the stored variables
+        addTotalRow(innerTable, "المجموع", String.valueOf(subTotal), smallBoldFont, smallBoldFont);
+        addTotalRow(innerTable, "رسوم الشحن", String.valueOf(delivery), smallBoldFont, smallBoldFont);
+        addTotalRow(innerTable, "الخصم", String.valueOf(discount), smallBoldFont, smallBoldFont);
+
+        addTotalRow(innerTable, "الاجمالي", String.valueOf(totalWithDownPayment), smallBoldFont, smallBoldFont);
+        addTotalRow(innerTable, "مدفوع مسبقا", String.valueOf(downPayment * -1), smallBoldFont, smallBoldFont);
+        addTotalRow(innerTable, "المبلغ المتبقي", String.valueOf(totalPrice), smallBoldFont, smallBoldFont);
 
         // Add the inner table to the main left cell
         leftCell.addElement(innerTable);

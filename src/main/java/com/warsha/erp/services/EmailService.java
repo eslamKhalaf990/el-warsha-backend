@@ -14,6 +14,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +25,15 @@ public class EmailService {
     @Autowired
     private JavaMailSender javaMailSender;
 
+    // Formatter for consistent log timestamps
+    private final DateTimeFormatter logFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+
+    private String getTimestamp() {
+        return LocalDateTime.now().format(logFormat);
+    }
+
     public List<String> saveImagesToTemp(List<MultipartFile> files) throws IOException {
+        System.out.println("[" + getTimestamp() + "] INFO: Processing " + (files != null ? files.size() : 0) + " files for temporary storage");
         List<String> tempPaths = new ArrayList<>();
 
         if (files == null || files.isEmpty()) {
@@ -31,40 +41,37 @@ public class EmailService {
         }
 
         for (MultipartFile file : files) {
-            if (file.isEmpty()) continue;
+            if (file.isEmpty()) {
+                System.out.println("[" + getTimestamp() + "] WARN: Skipping empty file upload");
+                continue;
+            }
 
-            // 1. Extract the original extension (e.g., ".jpg")
             String originalName = file.getOriginalFilename();
-            String extension = ".tmp"; // Default fallback
+            String extension = ".tmp";
             if (originalName != null && originalName.contains(".")) {
                 extension = originalName.substring(originalName.lastIndexOf("."));
             }
 
-            // 2. Create a temp file with a unique name
-            // "order_" is the prefix, extension is the suffix
             Path tempFile = Files.createTempFile("order_upload_", extension);
-
-            // 3. Save the uploaded content to that file
             Files.copy(file.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
 
-            // 4. Add absolute path to list
-            tempPaths.add(tempFile.toFile().getAbsolutePath());
+            String absolutePath = tempFile.toFile().getAbsolutePath();
+            System.out.println("[" + getTimestamp() + "] INFO: File saved to temp: " + absolutePath);
+            tempPaths.add(absolutePath);
         }
 
         return tempPaths;
     }
 
-    // Updated signature to accept a List of Strings
     public void sendNewOrderNotification(String customerName, String orderId, double orderTotal, List<String> imagePaths) {
+        System.out.println("[" + getTimestamp() + "] INFO: Preparing email notification for Order ID: " + orderId);
 
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
-
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
             helper.setFrom("elwarsha77a@gmail.com");
             helper.setTo("ahmednaser77a@gmail.com");
-//            helper.setTo("ekhalaf990@gmail.com");
             helper.setSubject("New Order Received! (ID: " + orderId + ")");
 
             String emailBody = String.format("""
@@ -83,24 +90,27 @@ public class EmailService {
 
             helper.setText(emailBody);
 
+            int attachmentCount = 0;
             if (imagePaths != null && !imagePaths.isEmpty()) {
                 for (String path : imagePaths) {
                     FileSystemResource file = new FileSystemResource(new File(path));
 
                     if (file.exists()) {
-                        // attach the file using its original name
                         helper.addAttachment(file.getFilename(), file);
+                        attachmentCount++;
                     } else {
-                        System.out.println("Warning: Image not found at " + path);
+                        System.out.println("[" + getTimestamp() + "] WARN: Attachment missing at path: " + path);
                     }
                 }
             }
 
             javaMailSender.send(message);
-            System.out.println("Order notification sent with " + imagePaths.size() + " attachments.");
+            System.out.println("[" + getTimestamp() + "] SUCCESS: Email sent for Order " + orderId + " with " + attachmentCount + " attachments.");
 
         } catch (MessagingException e) {
-            System.err.println("Error sending email: " + e.getMessage());
+            System.out.println("[" + getTimestamp() + "] ERROR: MessagingException while sending email: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("[" + getTimestamp() + "] ERROR: Unexpected error during email process: " + e.getMessage());
         }
     }
 }

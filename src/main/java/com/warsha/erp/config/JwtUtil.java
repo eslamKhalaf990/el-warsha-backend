@@ -8,6 +8,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -17,14 +19,26 @@ public class JwtUtil {
     private static final String SECRET_KEY = "the-great-strong-secret-key-01236547890!!";
     private final SecretKey key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
 
+    // Formatter for consistent log timestamps
+    private final DateTimeFormatter logFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+
+    private String getTimestamp() {
+        return LocalDateTime.now().format(logFormat);
+    }
+
     public String generateToken(String username, String role) {
-        // 1 hour
+        // 8 hours
         long EXPIRATION = 1000 * 60 * 60 * 8;
+        Date expDate = new Date(System.currentTimeMillis() + EXPIRATION);
+
+        System.out.println("[" + getTimestamp() + "] INFO: Generating JWT for " + username + " (Role: " + role + ")");
+        System.out.println("[" + getTimestamp() + "] INFO: Token will expire at: " + expDate);
+
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .claim("role", role)
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
+                .setExpiration(expDate)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -39,19 +53,41 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (Exception e) {
+            System.out.println("[" + getTimestamp() + "] ERROR: Failed to parse JWT claims: " + e.getMessage());
+            throw e;
+        }
     }
 
     private boolean isTokenExpired(String token) {
-        return extractAllClaims(token).getExpiration().before(new Date());
+        Date expiration = extractAllClaims(token).getExpiration();
+        boolean expired = expiration.before(new Date());
+        if (expired) {
+            System.out.println("[" + getTimestamp() + "] WARN: Token expired at " + expiration);
+        }
+        return expired;
     }
 
     public boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        boolean usernameMatches = username.equals(userDetails.getUsername());
+        boolean expired = isTokenExpired(token);
+
+        if (!usernameMatches) {
+            System.out.println("[" + getTimestamp() + "] ERROR: Token username '" + username + "' does not match UserDetails '" + userDetails.getUsername() + "'");
+        }
+
+        boolean isValid = (usernameMatches && !expired);
+        if (isValid) {
+            System.out.println("[" + getTimestamp() + "] SUCCESS: Token validation passed for " + username);
+        }
+
+        return isValid;
     }
 }

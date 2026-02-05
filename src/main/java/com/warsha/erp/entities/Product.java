@@ -31,7 +31,7 @@ public class Product {
     private Double SellingPrice;
 
     @Column(name = "Discount")
-    private Double Discount;
+    private Double Discount = 0.0;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Category", nullable = false)

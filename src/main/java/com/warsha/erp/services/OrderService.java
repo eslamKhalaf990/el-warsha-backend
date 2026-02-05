@@ -6,7 +6,6 @@ import com.warsha.erp.dtos.*;
 import com.warsha.erp.entities.*;
 import com.warsha.erp.repository.OrderRepository;
 import com.warsha.erp.repository.ProductRepository;
-import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,9 +38,11 @@ public class OrderService {
     private final ProductService productService;
     private final InvoiceService invoiceService;
     private final EmailService emailService;
-
     private final PaymentService paymentService;
     private final BankTransactionService bankTransactionService;
+
+    // Formatter for consistent log timestamps
+    private final DateTimeFormatter logFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
 
     @Autowired
     public OrderService(OrderRepository orderRepo, ProductRepository productRepository,
@@ -58,105 +60,66 @@ public class OrderService {
         this.bankTransactionService = bankTransactionService;
     }
 
-    // ERP Place Order
+    private String getTimestamp() {
+        return LocalDateTime.now().format(logFormat);
+    }
+
     @Transactional
     public Order createOrder(CreateOrderRequest request) {
+        System.out.println("[" + getTimestamp() + "] INFO: Starting ERP Order creation for Customer ID: " + request.getCustomerId());
         Customer customer = customerService.getCustomerByID(request.getCustomerId());
 
-        // prepare basic order info
         Order order = new Order();
         order.setCustomer(customer);
         order.setOrderDate(LocalDate.now());
         order.setStatus("Pending");
         order.setOrderSource(request.getOrderSource());
         order.setDeliveryCharge(request.getDelivery());
-
-        // todo: you can't let the client send the unit prices
         order.setTotalPrice(request.calculateTotalPriceERP());
         order.setDiscount(request.getDiscount());
         order.setNotes(request.getNotes());
 
         List<OrderItems> itemList = new ArrayList<>();
 
-        // loop through items
         for (OrderItemRequest itemReq : request.getItems()) {
             Product product = productService.getProductById(itemReq.getProductId());
+            System.out.println("[" + getTimestamp() + "] INFO: Adding Product: " + product.getName() + " (Qty: " + itemReq.getQuantity() + ")");
 
             OrderItems item = new OrderItems();
             item.setOrder(order);
             item.setProduct(product);
-
-            if(itemReq.getUnitPrice() == null)
-                item.setUnitPrice(product.getSellingPrice());
-            else
-                item.setUnitPrice(itemReq.getUnitPrice());
-
+            item.setUnitPrice(itemReq.getUnitPrice() == null ? product.getSellingPrice() : itemReq.getUnitPrice());
             item.setQuantity(itemReq.getQuantity());
 
-            // ===== 1. Reduce stock =====
             int oldValue = Integer.parseInt(product.getQuantity());
-            int newValue = itemReq.getQuantity();
-            product.setQuantity(String.valueOf(oldValue - newValue));
-
-            // ===== 2. Increase sold =====
+            product.setQuantity(String.valueOf(oldValue - itemReq.getQuantity()));
             int soldBefore = product.getSold() != null ? product.getSold() : 0;
-            product.setSold(soldBefore + newValue);
+            product.setSold(soldBefore + itemReq.getQuantity());
 
-            // ===== 3. Save product =====
             productService.updateProduct(itemReq.getProductId(), product);
-
             itemList.add(item);
         }
 
         order.setItems(itemList);
-
         Order savedOrder = orderRepository.save(order);
+        System.out.println("[" + getTimestamp() + "] SUCCESS: ERP Order #" + savedOrder.getId() + " saved.");
 
-        // generate invoice for order
         invoiceService.generateInvoice(savedOrder.getId());
 
-        // prepare payment for the order
-        CreatePaymentRequest paymentRequest = new CreatePaymentRequest();
-        paymentRequest.setOrderId(savedOrder.getId());
-        paymentRequest.setAmountPaid(request.getDownPayment());
-        paymentRequest.setPaymentMethod(request.getPaymentMethod());
-        paymentRequest.setPaymentStatus("Completed");
-
-        // deposit the down payment to egypt post -5 EGP
-        BankTransactionDTO bankTransactionDTO = new BankTransactionDTO();
-        bankTransactionDTO.setBankAccountId(request.getBankAccountId());
-        bankTransactionDTO.setTransactionType("Deposit");
-        bankTransactionDTO.setReferenceType("Order");
-        bankTransactionDTO.setReferenceId(savedOrder.getId());
-        bankTransactionDTO.setCategoryId(1L);
-        bankTransactionDTO.setDescription("A down payment from order #" + savedOrder.getId());
-        bankTransactionDTO.setAmount(BigDecimal.valueOf( request.getBankAccountId() == 3L ? request.getDownPayment() - 5: request.getDownPayment()));
-        bankTransactionService.createTransaction(bankTransactionDTO);
-
-        paymentService.createPayment(paymentRequest);
+        processFinance(savedOrder.getId(), request.getDownPayment(), request.getPaymentMethod(), request.getBankAccountId(), "ERP Down Payment");
 
         return savedOrder;
     }
 
-    // ECommerce Place Order
     @Transactional
     public Order placeOrder(CreateOrderRequest request, Long customerId, List<MultipartFile> images) {
-        // 1. Fetch Customer
+        System.out.println("[" + getTimestamp() + "] INFO: Starting E-Commerce Order for Customer ID: " + customerId);
         Customer customer = customerService.getCustomerByID(customerId);
 
-        // 2. Extract IDs and Lock Products
-        // We fetch all products in ONE query with a LOCK to prevent race conditions
-        List<Long> productIds = request.getItems().stream()
-                .map(OrderItemRequest::getProductId)
-                .collect(Collectors.toList());
-
+        List<Long> productIds = request.getItems().stream().map(OrderItemRequest::getProductId).collect(Collectors.toList());
         List<Product> products = productRepository.findAllByIdWithLock(productIds);
+        Map<Long, Product> productMap = products.stream().collect(Collectors.toMap(Product::getProductID, Function.identity()));
 
-        // Map for fast lookup: ID -> Product
-        Map<Long, Product> productMap = products.stream()
-                .collect(Collectors.toMap(Product::getProductID, Function.identity()));
-
-        // 3. Prepare Order Header
         Order order = new Order();
         order.setCustomer(customer);
         order.setOrderDate(LocalDate.now());
@@ -169,101 +132,64 @@ public class OrderService {
         List<OrderItems> orderItemsList = new ArrayList<>();
         BigDecimal calculatedTotal = BigDecimal.ZERO;
 
-        // 4. Process Items (Validate & Update)
         for (OrderItemRequest itemReq : request.getItems()) {
             Product product = productMap.get(itemReq.getProductId());
+            if (product == null) throw new IllegalArgumentException("Product ID " + itemReq.getProductId() + " not found.");
 
-            // A. Existence Check
-            if (product == null) {
-                throw new IllegalArgumentException("Product ID " + itemReq.getProductId() + " not found.");
-            }
-
-            // B. Soft Delete Check (Don't sell deleted items)
-            if ("true".equalsIgnoreCase(product.getDeleted()) || product.getDeletedAt() != null) {
-                throw new IllegalArgumentException("Product " + product.getName() + " is no longer available.");
-            }
-
-            // C. Parse Quantity (String -> Int) safely
-            int currentStock = 0;
-            try {
-                currentStock = Integer.parseInt(product.getQuantity());
-            } catch (NumberFormatException e) {
-                throw new IllegalStateException("Data Error: Product " + product.getName() + " has invalid stock format.");
-            }
-
-            // D. Stock Check
+            int currentStock = Integer.parseInt(product.getQuantity());
             if (currentStock < itemReq.getQuantity()) {
+                System.out.println("[" + getTimestamp() + "] ERROR: Out of stock for " + product.getName());
                 throw new IllegalArgumentException("Insufficient stock for: " + product.getName());
             }
 
-            // E. Secure Price Calculation (Use DB Price, convert Double to BigDecimal)
-            // We use BigDecimal for money math to avoid floating point errors (e.g. 0.1 + 0.2 = 0.3000004)
             BigDecimal unitPrice = BigDecimal.valueOf(product.getSellingPrice() - product.getDiscount());
-            BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
-            calculatedTotal = calculatedTotal.add(lineTotal);
+            calculatedTotal = calculatedTotal.add(unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity())));
 
-            // F. Update Product State (In Memory)
-            // Reduce Stock
             product.setQuantity(String.valueOf(currentStock - itemReq.getQuantity()));
-
-            // Increase Sold Count (Handle null safety)
-            int currentSold = product.getSold() == null ? 0 : product.getSold();
-            product.setSold(currentSold + itemReq.getQuantity());
+            product.setSold((product.getSold() == null ? 0 : product.getSold()) + itemReq.getQuantity());
             product.setUpdatedAt(LocalDateTime.now());
 
-            // G. Create Order Item
             OrderItems item = new OrderItems();
             item.setOrder(order);
             item.setProduct(product);
-            item.setUnitPrice(product.getSellingPrice()); // Store as Double as per your entity
+            item.setUnitPrice(product.getSellingPrice());
             item.setQuantity(itemReq.getQuantity());
-
             orderItemsList.add(item);
         }
 
-        // 5. Save Bulk Updates (Products)
         productRepository.saveAll(products);
 
-        // 6. Finalize Order
-        // Calculate final total: (Sum of Items + Delivery) - Discount
-        BigDecimal finalTotal = calculatedTotal.add(BigDecimal.valueOf(EgyptGovernorates.getDeliveryPrice(customer.getGovernorate())));
-        finalTotal = finalTotal.subtract(BigDecimal.valueOf(request.getDownPayment()));
-
+        BigDecimal finalTotal = calculatedTotal.add(BigDecimal.valueOf(EgyptGovernorates.getDeliveryPrice(customer.getGovernorate())))
+                .subtract(BigDecimal.valueOf(request.getDownPayment()));
         order.setTotalPrice(finalTotal.doubleValue());
         order.setItems(orderItemsList);
 
         Order savedOrder = orderRepository.save(order);
-
-        System.out.println(savedOrder);
+        System.out.println("[" + getTimestamp() + "] SUCCESS: E-Commerce Order #" + savedOrder.getId() + " saved.");
 
         processPostOrderIntegrations(request, savedOrder);
+
         List<String> attachments = new ArrayList<>();
         try {
-           attachments = emailService.saveImagesToTemp(images);
-        } catch (IOException ignored) {
-
+            attachments = emailService.saveImagesToTemp(images);
+        } catch (IOException e) {
+            System.out.println("[" + getTimestamp() + "] ERROR: Image temp storage failed: " + e.getMessage());
         }
+
         emailService.sendNewOrderNotification(customer.getFullName(), savedOrder.getId().toString(), savedOrder.getTotalPrice(), attachments);
 
         return savedOrder;
     }
 
     private void processPostOrderIntegrations(CreateOrderRequest request, Order savedOrder) {
-        // Generate Invoice
+        System.out.println("[" + getTimestamp() + "] INFO: Integration processing for Order #" + savedOrder.getId());
         invoiceService.generateInvoice(savedOrder.getId());
 
-        // Egypt Post Fee Logic
-        // Defining constants makes logic readable and easy to change later
-        final long EGYPT_POST_BANK_ID = 3L;
-        final BigDecimal POST_FEE = BigDecimal.valueOf(5);
-
         BigDecimal depositAmount = BigDecimal.valueOf(request.getDownPayment());
-
-        if (request.getBankAccountId() != null && request.getBankAccountId() == EGYPT_POST_BANK_ID) {
-            depositAmount = depositAmount.subtract(POST_FEE);
+        if (request.getBankAccountId() != null && request.getBankAccountId() == 3L) {
+            depositAmount = depositAmount.subtract(BigDecimal.valueOf(5));
         }
 
-        // Bank Transaction
         BankTransactionDTO bankTx = new BankTransactionDTO();
         bankTx.setBankAccountId(request.getBankAccountId());
         bankTx.setTransactionType("Deposit");
@@ -274,7 +200,6 @@ public class OrderService {
         bankTx.setAmount(depositAmount);
         bankTransactionService.createTransaction(bankTx);
 
-        // Payment Record
         CreatePaymentRequest payReq = new CreatePaymentRequest();
         payReq.setOrderId(savedOrder.getId());
         payReq.setAmountPaid(request.getDownPayment());
@@ -283,13 +208,33 @@ public class OrderService {
         paymentService.createPayment(payReq);
     }
 
+    private void processFinance(Long orderId, Double downPayment, String method, Long bankId, String desc) {
+        System.out.println("[" + getTimestamp() + "] INFO: Finance Entry - Order #" + orderId + ", Amount: " + downPayment + ", bankId: " + bankId);
+        BankTransactionDTO bankTx = new BankTransactionDTO();
+        bankId = (bankId != null) ? bankId : 1L;
+        bankTx.setBankAccountId( bankId);
+        bankTx.setTransactionType("Deposit");
+        bankTx.setReferenceType("Order");
+        bankTx.setReferenceId(orderId);
+        bankTx.setCategoryId(1L);
+        bankTx.setDescription(desc + " #" + orderId);
+        bankTx.setAmount(BigDecimal.valueOf(bankId == 3L ? downPayment - 5 : downPayment));
+        bankTransactionService.createTransaction(bankTx);
+
+        CreatePaymentRequest payReq = new CreatePaymentRequest();
+        payReq.setOrderId(orderId);
+        payReq.setAmountPaid(downPayment);
+        payReq.setPaymentMethod(method);
+        payReq.setPaymentStatus("Completed");
+        paymentService.createPayment(payReq);
+    }
+
     @Transactional
     public Order updateOrder(Long orderId, CreateOrderRequest request) {
-        // 1. Fetch existing order
-        Order existingOrder = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+        System.out.println("[" + getTimestamp() + "] WARN: Processing update for Order #" + orderId);
+        Order existingOrder = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // 2. Update basic order info
+        // Update fields
         existingOrder.setOrderSource(request.getOrderSource());
         existingOrder.setCustomer(customerService.getCustomerByID(request.getCustomerId()));
         existingOrder.setDeliveryCharge(request.getDelivery());
@@ -297,7 +242,7 @@ public class OrderService {
         existingOrder.setNotes(request.getNotes());
         existingOrder.setTotalPrice(request.calculateTotalPriceERP());
 
-        // 3. Revert previous product quantities
+        // Revert Stock
         for (OrderItems item : existingOrder.getItems()) {
             Product product = item.getProduct();
             int restoredQty = Integer.parseInt(product.getQuantity()) + item.getQuantity();
@@ -305,183 +250,79 @@ public class OrderService {
             productService.updateProduct(product.getProductID(), product);
         }
 
-        // 4. Update items
-        existingOrder.getItems().clear(); // keep the reference
+        existingOrder.getItems().clear();
         for (OrderItemRequest itemReq : request.getItems()) {
             Product product = productService.getProductById(itemReq.getProductId());
-
-            // Deduct new quantities
             int oldValue = Integer.parseInt(product.getQuantity());
-            int newValue = itemReq.getQuantity();
-            if (oldValue < newValue) {
-                throw new RuntimeException("Insufficient stock for product: " + product.getName());
-            }
-            product.setQuantity(String.valueOf(oldValue - newValue));
+            if (oldValue < itemReq.getQuantity()) throw new RuntimeException("Insufficient stock for: " + product.getName());
+
+            product.setQuantity(String.valueOf(oldValue - itemReq.getQuantity()));
             productService.updateProduct(product.getProductID(), product);
 
-            // Create new order item
             OrderItems item = new OrderItems();
             item.setOrder(existingOrder);
             item.setProduct(product);
-            item.setQuantity(newValue);
+            item.setQuantity(itemReq.getQuantity());
             item.setUnitPrice(itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : product.getSellingPrice());
-
             existingOrder.getItems().add(item);
         }
 
-        // 5. Save order before dependent entities (important!)
         Order savedOrder = orderRepository.save(existingOrder);
-
-        // 6. Handle invoice updates
         invoiceService.regenerateInvoice(savedOrder.getId());
-
-        // clean up old payments
         paymentService.deletePaymentsByOrderId(savedOrder.getId());
 
-        // create new payment from updated request
-        CreatePaymentRequest paymentRequest = new CreatePaymentRequest();
-        paymentRequest.setOrderId(savedOrder.getId());
-        paymentRequest.setAmountPaid(request.getDownPayment());
-        paymentRequest.setPaymentMethod(request.getPaymentMethod());
-        paymentRequest.setPaymentStatus("Completed"); // or based on logic
+        processFinance(savedOrder.getId(), request.getDownPayment(), request.getPaymentMethod(), request.getBankAccountId(), "Updated Order Down Payment");
 
-        paymentService.createPayment(paymentRequest);
-
+        System.out.println("[" + getTimestamp() + "] SUCCESS: Order #" + orderId + " updated successfully.");
         return savedOrder;
     }
 
     @Transactional
     public Order updateOrderStatus(Long orderId, String status, Long bankAccountId) {
-        Order existingOrder = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-
+        System.out.println("[" + getTimestamp() + "] INFO: Updating status for Order #" + orderId + " to: " + status);
+        Order existingOrder = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
         existingOrder.setStatus(status);
 
-        // create transaction when order completed
-        if (status.equals("Completed")){
-            BankTransactionDTO bankTransactionDTO = new BankTransactionDTO();
-            bankTransactionDTO.setBankAccountId(bankAccountId);
-            bankTransactionDTO.setTransactionType("Deposit");
-            bankTransactionDTO.setReferenceType("Order");
-            bankTransactionDTO.setReferenceId(orderId);
-            bankTransactionDTO.setCategoryId(1L);
-            bankTransactionDTO.setDescription("Order #" + orderId + " Completed");
-            bankTransactionDTO.setAmount(BigDecimal.valueOf((existingOrder.getTotalPrice())));
-            bankTransactionService.createTransaction(bankTransactionDTO);
+        if ("Completed".equals(status)) {
+            System.out.println("[" + getTimestamp() + "] INFO: Order Completed. Recording final bank transaction.");
+            BankTransactionDTO bankTx = new BankTransactionDTO();
+            bankTx.setBankAccountId(bankAccountId);
+            bankTx.setTransactionType("Deposit");
+            bankTx.setReferenceType("Order");
+            bankTx.setReferenceId(orderId);
+            bankTx.setCategoryId(1L);
+            bankTx.setDescription("Order #" + orderId + " Final Payment");
+            bankTx.setAmount(BigDecimal.valueOf(existingOrder.getTotalPrice()));
+            bankTransactionService.createTransaction(bankTx);
         }
 
         return orderRepository.save(existingOrder);
     }
 
-    public List<OrderCountByGovernorateDto> getOrderCountsByGovernorate() {
-        return orderRepository.countOrdersByGovernorate();
-    }
-
     public List<OrderResponse> getAllOrders(LocalDate userStart, LocalDate userEnd) {
+        System.out.println("[" + getTimestamp() + "] INFO: Fetching orders for range: " + userStart + " to " + userEnd);
+        LocalDate start = (userStart != null) ? userStart : YearMonth.now().atDay(1);
+        LocalDate end = (userEnd != null) ? userEnd : YearMonth.now().atEndOfMonth();
 
-        LocalDate startDateTime;
-        LocalDateTime endDateTime;
-
-        // 1. Determine the Date Range
-        if (userStart != null && userEnd != null) {
-            // CASE A: User provided specific dates
-            startDateTime = LocalDate.from(userStart.atStartOfDay());
-            // We go to the very end of the end date (e.g., 23:59:59)
-            endDateTime = userEnd.atTime(LocalTime.MAX);
-        } else {
-            // CASE B: No dates provided, default to CURRENT MONTH
-            startDateTime = LocalDate.from(YearMonth.now().atDay(1).atStartOfDay());
-            // Start of next month (exclusive) covers all current month
-            endDateTime = YearMonth.now().plusMonths(1).atDay(1).atStartOfDay();
-        }
-
-        // 2. Fetch from Repo
-        List<Order> orders = orderRepository.findByOrderDateBetween(
-                startDateTime,
-                LocalDate.from(endDateTime),
-                Sort.by(Sort.Direction.DESC, "id")
-        );
-
-        // 3. Map to DTO (Your original logic)
-        return orders.stream().map(order -> {
-            // WARNING: This line causes an "N+1" performance issue (see note below)
-            List<PaymentDto> paymentDTOs = paymentService.getPaymentsByOrder(order.getId());
-
-            OrderResponse dto = new OrderResponse();
-
-            dto.setOrderId(order.getId());
-            dto.setNotes(order.getNotes());
-
-            // Safety check in case an order has no payments yet to avoid IndexOutOfBoundsException
-            if (!paymentDTOs.isEmpty()) {
-                dto.setPaymentMethod(paymentDTOs.getFirst().getPaymentMethod());
-                dto.setDownPayment(paymentDTOs.getFirst().getAmountPaid());
-            }
-
-            dto.setOrderDate(order.getOrderDate());
-            dto.setStatus(order.getStatus());
-            dto.setOrderSource(order.getOrderSource());
-            dto.setDiscount(order.getDiscount());
-            dto.setDelivery(order.getDeliveryCharge());
-            dto.setTotalPrice(BigDecimal.valueOf(order.getTotalPrice()));
-
-            // Map customer
-            Customer customer = order.getCustomer();
-            if (customer != null) {
-                CustomerDto customerDTO = new CustomerDto();
-                customerDTO.setCustomerId(customer.getId());
-                customerDTO.setFullName(customer.getFullName());
-                customerDTO.setGovernorate(customer.getGovernorate());
-                customerDTO.setSecondaryPhone(customer.getSecondaryPhone());
-                customerDTO.setCity(customer.getCity());
-                customerDTO.setPhone(customer.getPhone());
-                customerDTO.setAddress(customer.getAddress());
-                dto.setCustomer(customerDTO);
-            }
-
-            // Map order items
-            List<OrderItemDto> itemDTOs = order.getItems().stream().map(item -> new OrderItemDto(
-                    item.getProduct().getProductID(),
-                    item.getProduct().getName(),
-                    item.getQuantity(),
-                    item.getUnitPrice()
-            )).collect(Collectors.toList());
-
-            dto.setOrderItems(itemDTOs);
-
-            return dto;
-        }).collect(Collectors.toList());
+        List<Order> orders = orderRepository.findByOrderDateBetween(start, end, Sort.by(Sort.Direction.DESC, "id"));
+        return orders.stream().map(this::convertToOrderResponse).collect(Collectors.toList());
     }
 
     public List<OrderResponse> getOrdersByCustomer(Long customerId) {
-
-        // 1. Fetch from Repo
-        List<Order> orders = orderRepository.findByCustomerId(
-                customerId,
-                Sort.by(Sort.Direction.DESC, "id")
-        );
-
-        // 2. Map the list using the helper method
-        return orders.stream()
-                .map(this::convertToOrderResponse)
-                .collect(Collectors.toList());
+        System.out.println("[" + getTimestamp() + "] INFO: Fetching orders for Customer ID: " + customerId);
+        List<Order> orders = orderRepository.findByCustomerId(customerId, Sort.by(Sort.Direction.DESC, "id"));
+        return orders.stream().map(this::convertToOrderResponse).collect(Collectors.toList());
     }
 
-    /** * Reusable helper to map Order Entity to OrderResponse DTO
-     */
     private OrderResponse convertToOrderResponse(Order order) {
-        // WARNING: Be careful of the N+1 issue here (one call per order)
-        List<PaymentDto> paymentDTOs = paymentService.getPaymentsByOrder(order.getId());
-
+        List<PaymentDto> payments = paymentService.getPaymentsByOrder(order.getId());
         OrderResponse dto = new OrderResponse();
         dto.setOrderId(order.getId());
         dto.setNotes(order.getNotes());
-
-        if (!paymentDTOs.isEmpty()) {
-            dto.setPaymentMethod(paymentDTOs.getFirst().getPaymentMethod());
-            dto.setDownPayment(paymentDTOs.getFirst().getAmountPaid());
+        if (!payments.isEmpty()) {
+            dto.setPaymentMethod(payments.getFirst().getPaymentMethod());
+            dto.setDownPayment(payments.getFirst().getAmountPaid());
         }
-
         dto.setOrderDate(order.getOrderDate());
         dto.setStatus(order.getStatus());
         dto.setOrderSource(order.getOrderSource());
@@ -489,98 +330,61 @@ public class OrderService {
         dto.setDelivery(order.getDeliveryCharge());
         dto.setTotalPrice(BigDecimal.valueOf(order.getTotalPrice()));
 
-        // Map customer
-        Customer customer = order.getCustomer();
-        if (customer != null) {
-            CustomerDto customerDTO = new CustomerDto();
-            customerDTO.setCustomerId(customer.getId());
-            customerDTO.setFullName(customer.getFullName());
-            customerDTO.setGovernorate(customer.getGovernorate());
-            customerDTO.setPhone(customer.getPhone());
-            customerDTO.setAddress(customer.getAddress());
-            dto.setCustomer(customerDTO);
+        Customer c = order.getCustomer();
+        if (c != null) {
+            CustomerDto cDto = new CustomerDto();
+            cDto.setCustomerId(c.getId());
+            cDto.setFullName(c.getFullName());
+            cDto.setGovernorate(c.getGovernorate());
+            cDto.setPhone(c.getPhone());
+            cDto.setAddress(c.getAddress());
+            dto.setCustomer(cDto);
         }
 
-        // Map order items
-        List<OrderItemDto> itemDTOs = order.getItems().stream().map(item -> new OrderItemDto(
-                item.getProduct().getProductID(),
-                item.getProduct().getName(),
-                item.getQuantity(),
-                item.getUnitPrice()
-        )).collect(Collectors.toList());
-
-        dto.setOrderItems(itemDTOs);
+        dto.setOrderItems(order.getItems().stream().map(i -> new OrderItemDto(
+                i.getProduct().getProductID(), i.getProduct().getName(), i.getQuantity(), i.getUnitPrice()
+        )).collect(Collectors.toList()));
 
         return dto;
     }
 
     @Transactional
     public void deleteOrder(Long orderId) {
-        // 1. Fetch order
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+        System.out.println("[" + getTimestamp() + "] ALERT: Deleting Order #" + orderId);
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // 2. Restock products
         for (OrderItems item : order.getItems()) {
-            Product product = item.getProduct();
-            int currentStock = Integer.parseInt(product.getQuantity());
-            int restoredQty = currentStock + item.getQuantity();
-            product.setQuantity(String.valueOf(restoredQty));
-
-            productService.updateProduct(product.getProductID(), product);
+            Product p = item.getProduct();
+            p.setQuantity(String.valueOf(Integer.parseInt(p.getQuantity()) + item.getQuantity()));
+            productService.updateProduct(p.getProductID(), p);
         }
 
-        // 3. Delete related payments
         paymentService.deletePaymentsByOrderId(orderId);
-
-        // 4. Delete related invoice
         invoiceService.deleteInvoiceByOrderId(orderId);
-
-        // 5. Finally, delete the order
         orderRepository.delete(order);
+        System.out.println("[" + getTimestamp() + "] SUCCESS: Order #" + orderId + " deleted and stock restored.");
     }
 
     @Transactional
     public void cancelOrder(Long orderId) {
-        // 1. Fetch order
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+        System.out.println("[" + getTimestamp() + "] WARN: Cancelling Order #" + orderId);
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // Good Practice: Check if already cancelled
-        if ("Cancelled".equals(order.getStatus())) {
-            // Or use an enum: OrderStatus.CANCELLED.equals(order.getStatus())
-            throw new IllegalStateException("Order " + orderId + " is already cancelled.");
-        }
+        if ("Cancelled".equals(order.getStatus())) return;
 
-        // 2. Restock products
-        // This logic is correct and should remain.
-        // If an order is cancelled, items go back in stock.
         for (OrderItems item : order.getItems()) {
-            Product product = item.getProduct();
-            int currentStock = Integer.parseInt(product.getQuantity());
-            int restoredQty = currentStock + item.getQuantity();
-            product.setQuantity(String.valueOf(restoredQty));
-
-            productService.updateProduct(product.getProductID(), product);
+            Product p = item.getProduct();
+            p.setQuantity(String.valueOf(Integer.parseInt(p.getQuantity()) + item.getQuantity()));
+            productService.updateProduct(p.getProductID(), p);
         }
 
-        // 3. Soft-delete related payments (Update status)
-        // We replace the delete method with a new 'cancel' method.
         paymentService.cancelPaymentsByOrderId(orderId);
-
-        // 4. Handle related invoice (Remove deletion)
-        // We NO LONGER delete the invoice.
-        // It remains in the system, linked to a "Cancelled" order.
-        // This preserves the historical record.
-
-        // 5. Finally, soft-delete the order (Update status)
-        // Instead of deleting, we set its status and save.
-        order.setStatus("Cancelled"); // Use "Cancelled", "Deleted", or an enum
-
-        // Your 'Orders' table has an 'UpdatedAt' column.
-        // If you're using @UpdateTimestamp, Spring Data JPA handles this automatically.
-        // If not, set it manually: order.setUpdatedAt(LocalDateTime.now());
-
+        order.setStatus("Cancelled");
         orderRepository.save(order);
+        System.out.println("[" + getTimestamp() + "] SUCCESS: Order #" + orderId + " cancelled.");
+    }
+
+    public List<OrderCountByGovernorateDto> getOrderCountsByGovernorate() {
+        return orderRepository.countOrdersByGovernorate();
     }
 }
