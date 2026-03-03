@@ -38,7 +38,7 @@ public class CreateOrderRequest {
 
     public double calculateTotalPriceERP() {
         double itemsTotal = getItemsTotalPrice();
-        this.totalPrice = itemsTotal + delivery - discount - downPayment;
+        this.totalPrice = itemsTotal + delivery - downPayment;
         return this.totalPrice;
     }
 

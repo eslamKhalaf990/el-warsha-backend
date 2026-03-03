@@ -8,44 +8,44 @@ public class EgyptGovernorates {
 
     static {
         // --- Zone 1: Metro & Delta (Lower Cost - 55 EGP) ---
-        SHIPPING_RATES.put("القاهرة", 55.0);
-        SHIPPING_RATES.put("الجيزة", 55.0);
-        SHIPPING_RATES.put("القليوبية", 55.0);
-        SHIPPING_RATES.put("المنوفية", 55.0);
-        SHIPPING_RATES.put("الشرقية", 55.0);
-        SHIPPING_RATES.put("الغربية", 55.0);
+        SHIPPING_RATES.put("القاهرة", 80.0);
+        SHIPPING_RATES.put("الجيزة", 80.0);
+        SHIPPING_RATES.put("القليوبية", 100.0);
+        SHIPPING_RATES.put("المنوفية", 100.0);
+        SHIPPING_RATES.put("الشرقية", 100.0);
+        SHIPPING_RATES.put("الغربية", 100.0);
 
         // --- Zone 2: Coastal, Canal & North Upper Egypt (65 EGP) ---
-        SHIPPING_RATES.put("الإسكندرية", 65.0);
-        SHIPPING_RATES.put("البحيرة", 65.0);
-        SHIPPING_RATES.put("الدقهلية", 65.0);
-        SHIPPING_RATES.put("كفر الشيخ", 65.0);
-        SHIPPING_RATES.put("الإسماعيلية", 65.0);
-        SHIPPING_RATES.put("السويس", 65.0);
-        SHIPPING_RATES.put("بورسعيد", 65.0);
-        SHIPPING_RATES.put("الفيوم", 65.0);
-        SHIPPING_RATES.put("بني سويف", 65.0);
-        SHIPPING_RATES.put("المنيا", 65.0);
-        SHIPPING_RATES.put("دمياط", 65.0);
-        SHIPPING_RATES.put("دمياط الجديدة", 65.0);
+        SHIPPING_RATES.put("الإسكندرية", 90.0);
+        SHIPPING_RATES.put("البحيرة", 100.0);
+        SHIPPING_RATES.put("الدقهلية", 100.0);
+        SHIPPING_RATES.put("كفر الشيخ", 100.0);
+        SHIPPING_RATES.put("الإسماعيلية", 100.0);
+        SHIPPING_RATES.put("السويس", 100.0);
+        SHIPPING_RATES.put("بورسعيد", 100.0);
+        SHIPPING_RATES.put("الفيوم", 110.0);
+        SHIPPING_RATES.put("بني سويف", 110.0);
+        SHIPPING_RATES.put("المنيا", 110.0);
+        SHIPPING_RATES.put("دمياط", 100.0);
+        SHIPPING_RATES.put("دمياط الجديدة", 100.0);
 
         // --- Zone 3: Middle Upper Egypt & Sinai (80 EGP) ---
-        SHIPPING_RATES.put("أسيوط", 80.0);
-        SHIPPING_RATES.put("شمال سيناء", 80.0);
-        SHIPPING_RATES.put("جنوب سيناء", 80.0);
+        SHIPPING_RATES.put("أسيوط", 120.0);
+        SHIPPING_RATES.put("شمال سيناء", 130.0);
+        SHIPPING_RATES.put("جنوب سيناء", 130.0);
 
         // --- Zone 4: Remote & Deep South (90 EGP) ---
-        SHIPPING_RATES.put("سوهاج", 90.0);
-        SHIPPING_RATES.put("البحر الأحمر", 90.0);
-        SHIPPING_RATES.put("مطروح", 90.0);
+        SHIPPING_RATES.put("سوهاج", 120.0);
+        SHIPPING_RATES.put("البحر الأحمر", 120.0);
+        SHIPPING_RATES.put("مطروح", 130.0);
 
         // --- Zone 5: Furthest South (100 EGP) ---
-        SHIPPING_RATES.put("قنا", 100.0);
-        SHIPPING_RATES.put("الأقصر", 100.0);
-        SHIPPING_RATES.put("أسوان", 100.0);
+        SHIPPING_RATES.put("قنا", 120.0);
+        SHIPPING_RATES.put("الأقصر", 120.0);
+        SHIPPING_RATES.put("أسوان", 120.0);
 
         // --- Zone 6: Special (105 EGP) ---
-        SHIPPING_RATES.put("الوادي الجديد", 105.0);
+        SHIPPING_RATES.put("الوادي الجديد", 130.0);
     }
 
     public static boolean isValid(String city) {

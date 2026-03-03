@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.warsha.erp.dtos.*;
 import com.warsha.erp.entities.*;
+import com.warsha.erp.exceptions.InsufficientStockException;
 import com.warsha.erp.repository.OrderRepository;
 import com.warsha.erp.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,11 +76,10 @@ public class OrderService {
         order.setStatus("Pending");
         order.setOrderSource(request.getOrderSource());
         order.setDeliveryCharge(request.getDelivery());
-        order.setTotalPrice(request.calculateTotalPriceERP());
-        order.setDiscount(request.getDiscount());
         order.setNotes(request.getNotes());
 
         List<OrderItems> itemList = new ArrayList<>();
+        BigDecimal calculatedDiscount = BigDecimal.ZERO;
 
         for (OrderItemRequest itemReq : request.getItems()) {
             Product product = productService.getProductById(itemReq.getProductId());
@@ -96,9 +96,17 @@ public class OrderService {
             int soldBefore = product.getSold() != null ? product.getSold() : 0;
             product.setSold(soldBefore + itemReq.getQuantity());
 
+            calculatedDiscount = calculatedDiscount.add(
+                    BigDecimal.valueOf(itemReq.getQuantity())
+                            .multiply(BigDecimal.valueOf(product.getDiscount()))
+            );
+
             productService.updateProduct(itemReq.getProductId(), product);
             itemList.add(item);
         }
+
+        order.setDiscount(request.getDiscount() + calculatedDiscount.doubleValue());
+        order.setTotalPrice(request.calculateTotalPriceERP() - order.getDiscount());
 
         order.setItems(itemList);
         Order savedOrder = orderRepository.save(order);
@@ -111,6 +119,7 @@ public class OrderService {
         return savedOrder;
     }
 
+    //E-Commerce order with image attachments and email notification
     @Transactional
     public Order placeOrder(CreateOrderRequest request, Long customerId, List<MultipartFile> images) {
         System.out.println("[" + getTimestamp() + "] INFO: Starting E-Commerce Order for Customer ID: " + customerId);
@@ -126,11 +135,11 @@ public class OrderService {
         order.setStatus("Pending");
         order.setOrderSource(request.getOrderSource());
         order.setDeliveryCharge(EgyptGovernorates.getDeliveryPrice(customer.getGovernorate()));
-        order.setDiscount(request.getDiscount());
         order.setNotes(request.getNotes());
 
         List<OrderItems> orderItemsList = new ArrayList<>();
         BigDecimal calculatedTotal = BigDecimal.ZERO;
+        BigDecimal calculatedDiscount = BigDecimal.ZERO;
 
         for (OrderItemRequest itemReq : request.getItems()) {
             Product product = productMap.get(itemReq.getProductId());
@@ -139,11 +148,17 @@ public class OrderService {
             int currentStock = Integer.parseInt(product.getQuantity());
             if (currentStock < itemReq.getQuantity()) {
                 System.out.println("[" + getTimestamp() + "] ERROR: Out of stock for " + product.getName());
-                throw new IllegalArgumentException("Insufficient stock for: " + product.getName());
+                throw new InsufficientStockException("Insufficient stock for: " + product.getName());
             }
 
-            BigDecimal unitPrice = BigDecimal.valueOf(product.getSellingPrice() - product.getDiscount());
+            // todo:  - product.getDiscount()
+            BigDecimal unitPrice = BigDecimal.valueOf(product.getSellingPrice());
             calculatedTotal = calculatedTotal.add(unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+
+            calculatedDiscount = calculatedDiscount.add(
+                    BigDecimal.valueOf(itemReq.getQuantity())
+                            .multiply(BigDecimal.valueOf(product.getDiscount()))
+            );
 
             product.setQuantity(String.valueOf(currentStock - itemReq.getQuantity()));
             product.setSold((product.getSold() == null ? 0 : product.getSold()) + itemReq.getQuantity());
@@ -159,8 +174,12 @@ public class OrderService {
 
         productRepository.saveAll(products);
 
+        order.setDiscount(calculatedDiscount.doubleValue());
+
         BigDecimal finalTotal = calculatedTotal.add(BigDecimal.valueOf(EgyptGovernorates.getDeliveryPrice(customer.getGovernorate())))
-                .subtract(BigDecimal.valueOf(request.getDownPayment()));
+                .subtract(BigDecimal.valueOf(request.getDownPayment())).subtract(
+                        calculatedDiscount
+                );
         order.setTotalPrice(finalTotal.doubleValue());
         order.setItems(orderItemsList);
 
@@ -240,7 +259,7 @@ public class OrderService {
         existingOrder.setDeliveryCharge(request.getDelivery());
         existingOrder.setDiscount(request.getDiscount());
         existingOrder.setNotes(request.getNotes());
-        existingOrder.setTotalPrice(request.calculateTotalPriceERP());
+        existingOrder.setTotalPrice(request.calculateTotalPriceERP() - request.getDiscount());
 
         // Revert Stock
         for (OrderItems item : existingOrder.getItems()) {
@@ -294,6 +313,14 @@ public class OrderService {
             bankTx.setDescription("Order #" + orderId + " Final Payment");
             bankTx.setAmount(BigDecimal.valueOf(existingOrder.getTotalPrice()));
             bankTransactionService.createTransaction(bankTx);
+        } else if ("Processing".equals(status)){
+            System.out.println("[" + getTimestamp() + "] INFO: Order Processing. No financial action required at this stage.");
+            emailService.sendOrderProcessingEmail(
+                    existingOrder.getCustomer().getEmail(), // Assuming phone is used as email for demo
+                    existingOrder.getCustomer().getFullName(),
+                    existingOrder.getId().toString(),
+                    existingOrder.getTotalPrice()
+            );
         }
 
         return orderRepository.save(existingOrder);
@@ -380,6 +407,11 @@ public class OrderService {
 
         paymentService.cancelPaymentsByOrderId(orderId);
         order.setStatus("Cancelled");
+            emailService.sendOrderCancellationEmail(
+                    order.getCustomer().getEmail(),
+                    order.getCustomer().getFullName(),
+                    order.getId().toString()
+            );
         orderRepository.save(order);
         System.out.println("[" + getTimestamp() + "] SUCCESS: Order #" + orderId + " cancelled.");
     }
