@@ -364,6 +364,8 @@ public class OrderService {
             cDto.setFullName(c.getFullName());
             cDto.setGovernorate(c.getGovernorate());
             cDto.setPhone(c.getPhone());
+            cDto.setSecondaryPhone(c.getSecondaryPhone());
+            cDto.setCity(c.getCity());
             cDto.setAddress(c.getAddress());
             dto.setCustomer(cDto);
         }
