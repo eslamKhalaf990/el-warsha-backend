@@ -61,19 +61,32 @@ public class AuthController {
 
         try {
             Customer customer = customerService.findByEmail(request.getUsername());
-
+            
             if (customer != null && passwordEncoder.matches(request.getPassword(), customer.getPassword())) {
-                String token = jwtUtil.generateToken(customer.getEmail(), "CUSTOMER");
-                System.out.println("[" + getTimestamp() + "] SUCCESS: Customer authenticated: " + customer.getEmail());
+                
+                if ("Active".equals(customer.getStatus())) {
+                    String token = jwtUtil.generateToken(customer.getEmail(), "CUSTOMER");
+                    System.out.println("[" + getTimestamp() + "] SUCCESS: Customer authenticated: " + customer.getEmail());
 
-                return ResponseEntity.ok(new CustomerLogin(
-                        token,
-                        customer.getAddress(),
-                        customer.getFullName(),
-                        customer.getPhone(),
-                        customer.getEmail(),
-                        customer.getGovernorate())
-                );
+                    return ResponseEntity.ok(new CustomerLogin(
+                            token,
+                            customer.getAddress(),
+                            customer.getFullName(),
+                            customer.getPhone(),
+                            customer.getEmail(),
+                            customer.getGovernorate())
+                    );
+                } else if ("Pending".equals(customer.getStatus())) {
+                    System.out.println("[" + getTimestamp() + "] INFO: Customer account pending verification: " + customer.getEmail());
+                    
+                    String otp = emailService.sendOtpEmail(customer.getEmail());
+                    customerService.saveOtp(customer.getEmail(), otp);
+                    
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Account needs verification. OTP sent to email.");
+                } else {
+                     System.out.println("[" + getTimestamp() + "] WARN: Customer account status: " + customer.getStatus());
+                     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Account is not active.");
+                }
             }
 
             System.out.println("[" + getTimestamp() + "] WARN: Customer Login failed - Wrong password or user null for: " + request.getUsername());
@@ -82,6 +95,19 @@ public class AuthController {
         }
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid customer credentials");
+    }
+
+    @PostMapping("/verifyCode")
+    public ResponseEntity<?> verifyCode(@RequestBody VerifyRequest request) {
+        System.out.println("[" + getTimestamp() + "] INFO: Verifying code for: " + request.email());
+        
+        boolean isVerified = customerService.verifyOtp(request.email(), request.otp());
+        
+        if (isVerified) {
+             return ResponseEntity.ok("Account verified successfully");
+        } else {
+             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired OTP");
+        }
     }
 
     @PostMapping("/register")
@@ -102,5 +128,8 @@ public class AuthController {
     }
 
     record ERPLogin(String token) {
+    }
+
+    record VerifyRequest(String email, String otp) {
     }
 }

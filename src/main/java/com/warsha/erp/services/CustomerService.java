@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CustomerService {
@@ -69,7 +70,56 @@ public class CustomerService {
 
         Customer saved = customerRepository.save(customer);
         System.out.println("[" + getTimestamp() + "] SUCCESS: Customer saved with ID: " + saved.getId());
+
+        // Generate and save OTP
+        String otp = emailService.sendOtpEmail(saved.getEmail());
+        saveOtp(saved.getEmail(), otp);
+
         return saved;
+    }
+
+    public void saveOtp(String email, String otp) {
+        System.out.println("[" + getTimestamp() + "] INFO: Saving OTP for customer: " + email);
+        Optional<Customer> customerOptional = customerRepository.findByEmail(email);
+        
+        if (customerOptional.isPresent()) {
+            Customer customer = customerOptional.get();
+            customer.setOtp(otp);
+            customer.setStatus("Pending");
+            customer.setOtpExpirationTime(LocalDateTime.now().plusMinutes(10)); // OTP valid for 10 minutes
+            customerRepository.save(customer);
+            System.out.println("[" + getTimestamp() + "] SUCCESS: OTP saved for customer: " + email);
+        } else {
+            System.out.println("[" + getTimestamp() + "] ERROR: Cannot save OTP, customer not found: " + email);
+             throw new RuntimeException("Customer not found");
+        }
+    }
+
+    public boolean verifyOtp(String email, String otp) {
+        System.out.println("[" + getTimestamp() + "] INFO: Verifying OTP for customer: " + email);
+        Optional<Customer> customerOptional = customerRepository.findByEmail(email);
+
+        if (customerOptional.isPresent()) {
+            Customer customer = customerOptional.get();
+            
+            if (customer.getOtp() != null && customer.getOtp().equals(otp)) {
+                if (customer.getOtpExpirationTime() != null && LocalDateTime.now().isBefore(customer.getOtpExpirationTime())) {
+                    customer.setStatus("Active");
+                    customer.setOtp(null);
+                    customer.setOtpExpirationTime(null);
+                    customerRepository.save(customer);
+                    System.out.println("[" + getTimestamp() + "] SUCCESS: OTP verified, customer active: " + email);
+                    return true;
+                } else {
+                     System.out.println("[" + getTimestamp() + "] WARN: OTP expired for customer: " + email);
+                }
+            } else {
+                System.out.println("[" + getTimestamp() + "] WARN: Invalid OTP for customer: " + email);
+            }
+        } else {
+             System.out.println("[" + getTimestamp() + "] ERROR: Customer not found for verification: " + email);
+        }
+        return false;
     }
 
     public Customer updateCustomer(Long id, Customer updateCustomer) {

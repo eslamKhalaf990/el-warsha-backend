@@ -4,6 +4,7 @@ import com.warsha.erp.config.JwtUtil;
 import com.warsha.erp.dtos.CustomerCountByGovernorate;
 import com.warsha.erp.entities.Customer;
 import com.warsha.erp.services.CustomerService;
+import com.warsha.erp.services.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +24,8 @@ public class CustomerController {
     @Autowired private JwtUtil jwtUtil;
 
     @Autowired private PasswordEncoder passwordEncoder;
+
+    @Autowired private EmailService emailService;
 
     // Formatter for consistent log timestamps
     private final DateTimeFormatter logFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
@@ -60,18 +63,18 @@ public class CustomerController {
         System.out.println("[" + getTimestamp() + "] INFO: New customer self-signup attempt: " + customer.getEmail());
 
         try {
-            customerService.createCustomer(customer);
-            String token = jwtUtil.generateToken(customer.getEmail(), "CUSTOMER");
+            Customer savedCustomer = customerService.createCustomer(customer);
+            String token = jwtUtil.generateToken(savedCustomer.getEmail(), "CUSTOMER");
 
-            System.out.println("[" + getTimestamp() + "] SUCCESS: Customer sign-up successful for " + customer.getEmail());
+            System.out.println("[" + getTimestamp() + "] SUCCESS: Customer sign-up successful for " + savedCustomer.getEmail());
 
             return ResponseEntity.ok(new AuthController.CustomerLogin(
                     token,
-                    customer.getAddress(),
-                    customer.getFullName(),
-                    customer.getPhone(),
-                    customer.getEmail(),
-                    customer.getGovernorate()
+                    savedCustomer.getAddress(),
+                    savedCustomer.getFullName(),
+                    savedCustomer.getPhone(),
+                    savedCustomer.getEmail(),
+                    savedCustomer.getGovernorate()
             ));
         } catch (Exception e) {
             System.out.println("[" + getTimestamp() + "] ERROR: Customer sign-up failed: " + e.getMessage());
@@ -97,5 +100,22 @@ public class CustomerController {
         System.out.println("[" + getTimestamp() + "] ALERT: Request to DELETE ALL customers received!");
         customerService.deleteAll();
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/resend-otp")
+    public ResponseEntity<String> resendOtp(@RequestParam String email) {
+        System.out.println("[" + getTimestamp() + "] INFO: Request to resend OTP for: " + email);
+        try {
+            String otp = emailService.sendOtpEmail(email);
+            if (otp != null) {
+                customerService.saveOtp(email, otp);
+                return ResponseEntity.ok("OTP resent successfully.");
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to send OTP.");
+            }
+        } catch (Exception e) {
+            System.out.println("[" + getTimestamp() + "] ERROR: Resending OTP failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+        }
     }
 }

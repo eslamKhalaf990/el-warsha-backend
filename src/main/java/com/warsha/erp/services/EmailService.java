@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 @Service
 public class EmailService {
@@ -30,6 +31,53 @@ public class EmailService {
 
     private String getTimestamp() {
         return LocalDateTime.now().format(logFormat);
+    }
+
+    public String generateOtp() {
+        Random random = new Random();
+        int otp = 100000 + random.nextInt(900000);
+        return String.valueOf(otp);
+    }
+
+    public String sendOtpEmail(String toEmail) {
+        String otp = generateOtp();
+        try {
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom("elwarsha77a@gmail.com");
+            helper.setTo(toEmail);
+            helper.setSubject("رمز التحقق الخاص بك - OTP");
+
+            String htmlContent = """
+            <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #444; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 25px; text-align: right;">
+                <h2 style="color: #333; border-bottom: 2px solid #f4e4e4; padding-bottom: 10px;">رمز التحقق</h2>
+                
+                <p>استخدم رمز التحقق التالي لإكمال إجراءات التحقق الخاصة بك:</p>
+                
+                <div style="background-color: #fafafa; padding: 20px; border-radius: 8px; margin: 20px 0; border-right: 4px solid #d4a373; text-align: center;">
+                    <h1 style="margin: 0; color: #d4a373; letter-spacing: 5px;">%s</h1>
+                </div>
+            
+                <p>هذا الرمز صالح لفترة محدودة. لا تشارك هذا الرمز مع أي شخص.</p>
+                
+                <p style="margin-top: 30px;">شكراً لك،<br/><strong>فريق عمل ورشة</strong></p>
+                
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                <p style="font-size: 12px; color: #999;">إذا لم تطلب هذا الرمز، يرجى تجاهل هذا البريد الإلكتروني.</p>
+            </div>
+            """.formatted(otp);
+
+            helper.setText(htmlContent, true);
+
+            javaMailSender.send(message);
+            System.out.println("[" + getTimestamp() + "] SUCCESS: OTP sent to " + toEmail);
+            return otp;
+
+        } catch (Exception e) {
+            System.err.println("[" + getTimestamp() + "] ERROR: Failed to send OTP email: " + e.getMessage());
+            return null;
+        }
     }
 
     public List<String> saveImagesToTemp(List<MultipartFile> files) throws IOException {
@@ -71,8 +119,8 @@ public class EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
             helper.setFrom("elwarsha77a@gmail.com");
-//            helper.setTo("ekhalaf990@gmail.com");
-            helper.setTo("ahmednaser77a@gmail.com");
+            helper.setTo("ekhalaf990@gmail.com");
+//            helper.setTo("ahmednaser77a@gmail.com");
             helper.setSubject("New Order Received! (ID: " + orderId + ")");
 
             String emailBody = String.format("""

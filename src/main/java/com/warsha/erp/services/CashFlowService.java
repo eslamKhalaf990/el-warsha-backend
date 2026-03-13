@@ -1,8 +1,6 @@
 package com.warsha.erp.services;
 
-import com.warsha.erp.dtos.DailyCashFlowDto;
-import com.warsha.erp.dtos.RevenueSummaryDto;
-import com.warsha.erp.dtos.TopProductDTO;
+import com.warsha.erp.dtos.*;
 import com.warsha.erp.repository.CashFlowRepository;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +17,8 @@ public class CashFlowService {
     public CashFlowService(CashFlowRepository cashFlowRepository) {
         this.cashFlowRepository = cashFlowRepository;
     }
+
+    // --- Existing Methods ---
 
     public List<DailyCashFlowDto> getDailyCashFlow() {
         return cashFlowRepository.getDailyCashFlowRaw().stream().map(row -> {
@@ -43,24 +43,119 @@ public class CashFlowService {
     }
 
     public List<TopProductDTO> getTop5SoldProductsForMonth(Date targetDate) {
-
-        // 1. Get the raw data from the repository
         List<Object[]> rawResults = cashFlowRepository.getTop5SoldProductsForMonth(targetDate);
-
-        // 2. Manually map the raw data to your new DTO
         List<TopProductDTO> dtoList = new ArrayList<>();
         for (Object[] row : rawResults) {
             TopProductDTO dto = new TopProductDTO();
-
-            // Safely cast and set each field
             dto.setProductId(row[0] != null ? ((Number) row[0]).longValue() : null);
             dto.setName((String) row[1]);
             dto.setTotalSold(row[3] != null ? ((Number) row[3]).intValue() : null);
             dto.setTotalProfit(row[2] != null ? ((Number) row[2]).intValue() : null);
-
             dtoList.add(dto);
         }
-
         return dtoList;
+    }
+
+    // --- New BI Methods ---
+
+    /** 1. Repeat Customers */
+    public List<CustomerLoyaltyDto> getRepeatCustomers() {
+        return cashFlowRepository.getRepeatCustomers().stream().map(row ->
+                new CustomerLoyaltyDto(
+                        ((Number) row[0]).longValue(),
+                        (String) row[1],
+                        ((Number) row[2]).longValue()
+                )
+        ).toList();
+    }
+
+    /** 2. VIP Customers */
+    public List<VipCustomerDto> getTopVIPCustomers() {
+        return cashFlowRepository.getTopVIPCustomers().stream().map(row ->
+                new VipCustomerDto(
+                        (String) row[0],
+                        ((Number) row[1]).longValue(),
+                        row[2] != null ? ((Number) row[2]).doubleValue() : 0.0,
+                        row[3] != null ? ((Number) row[3]).doubleValue() : 0.0
+                )
+        ).toList();
+    }
+
+    /** 3. At-Risk Customers */
+    public List<AtRiskCustomerDto> getAtRiskCustomers() {
+        return cashFlowRepository.getAtRiskCustomers().stream().map(row ->
+                new AtRiskCustomerDto(
+                        (String) row[0],
+                        (String) row[1],
+                        ((Number) row[2]).longValue(),
+                        (java.util.Date) row[3],
+                        ((Number) row[4]).intValue()
+                )
+        ).toList();
+    }
+
+    /** 4. Revenue by Source */
+    public List<OrderSourceDto> getRevenueBySource() {
+        return cashFlowRepository.getRevenueBySource().stream().map(row ->
+                new OrderSourceDto(
+                        (String) row[0],
+                        ((Number) row[1]).longValue(),
+                        row[2] != null ? ((Number) row[2]).doubleValue() : 0.0,
+                        row[3] != null ? ((Number) row[3]).doubleValue() : 0.0
+                )
+        ).toList();
+    }
+
+    /** 5. Discount Seekers */
+    public List<DiscountSeekerDto> getDiscountSeekers() {
+        return cashFlowRepository.getDiscountSeekers().stream().map(row ->
+                new DiscountSeekerDto(
+                        (String) row[0],
+                        ((Number) row[1]).longValue(),
+                        row[2] != null ? ((Number) row[2]).doubleValue() : 0.0,
+                        row[3] != null ? ((Number) row[3]).doubleValue() : 0.0
+                )
+        ).toList();
+    }
+
+    /** 6. Top 20 Best Selling Products */
+    public List<ProductPerformanceDto> getTop20Products() {
+        return cashFlowRepository.getTop20Products().stream().map(row ->
+                new ProductPerformanceDto(
+                        ((Number) row[0]).longValue(),
+                        ((Number) row[1]).longValue(),
+                        row[2] != null ? ((Number) row[2]).doubleValue() : 0.0
+                )
+        ).toList();
+    }
+
+    /** 7. Governorate Performance */
+    public List<RegionalPerformanceDto> getPerformanceByGovernorate() {
+        return cashFlowRepository.getPerformanceByGovernorate().stream().map(row ->
+                new RegionalPerformanceDto(
+                        (String) row[0],
+                        ((Number) row[1]).longValue(),
+                        row[2] != null ? ((Number) row[2]).doubleValue() : 0.0,
+                        row[3] != null ? ((Number) row[3]).doubleValue() : 0.0
+                )
+        ).toList();
+    }
+
+    /** 8. KPI: Average Basket Size */
+    public Double getAverageBasketSize() {
+        Double value = cashFlowRepository.getAverageBasketSize();
+        return value != null ? value : 0.0;
+    }
+
+    /** 9. Daily Revenue Report */
+    public List<DailyRevenueReportDto> getDailyRevenueReport() {
+        return cashFlowRepository.getDailyRevenueReport().stream().map(row ->
+                new DailyRevenueReportDto(
+                        (String) row[0], // Already formatted as dd MM yyyy from SQL
+                        ((Number) row[1]).longValue(),
+                        row[2] != null ? ((Number) row[2]).doubleValue() : 0.0,
+                        row[3] != null ? ((Number) row[3]).doubleValue() : 0.0
+                )
+        ).toList();
     }
 }

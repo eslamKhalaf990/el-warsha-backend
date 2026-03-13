@@ -50,6 +50,12 @@ public class Customer {
     @Column(name = "Status")
     private String status = "Active";
 
+    @Column(name = "Otp")
+    private String otp;
+
+    @Column(name = "OtpExpirationTime")
+    private LocalDateTime otpExpirationTime;
+
     @Override
     public String toString() {
         return "Customer{" +
@@ -64,6 +70,8 @@ public class Customer {
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
                 ", status='" + status + '\'' +
+                ", otp='" + otp + '\'' +
+                ", otpExpirationTime=" + otpExpirationTime +
                 '}';
     }
 }
