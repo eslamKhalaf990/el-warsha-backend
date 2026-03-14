@@ -64,18 +64,11 @@ public class CustomerController {
 
         try {
             Customer savedCustomer = customerService.createCustomer(customer);
-            String token = jwtUtil.generateToken(savedCustomer.getEmail(), "CUSTOMER");
+            System.out.println("[" + getTimestamp() + "] SUCCESS: Customer sign-up successful for " + savedCustomer.getEmail() + ". Pending verification.");
 
-            System.out.println("[" + getTimestamp() + "] SUCCESS: Customer sign-up successful for " + savedCustomer.getEmail());
-
-            return ResponseEntity.ok(new AuthController.CustomerLogin(
-                    token,
-                    savedCustomer.getAddress(),
-                    savedCustomer.getFullName(),
-                    savedCustomer.getPhone(),
-                    savedCustomer.getEmail(),
-                    savedCustomer.getGovernorate()
-            ));
+            // Standard Flow: Do NOT return a valid login token for a pending account.
+            // Return a message so the frontend knows to route them to the OTP verification screen.
+            return ResponseEntity.status(HttpStatus.CREATED).body("Registration successful. Please check your email for the verification code.");
         } catch (Exception e) {
             System.out.println("[" + getTimestamp() + "] ERROR: Customer sign-up failed: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Registration failed: " + e.getMessage());
@@ -108,6 +101,7 @@ public class CustomerController {
         try {
             String otp = emailService.sendOtpEmail(email);
             if (otp != null) {
+                // Use saveOtp because this is for the initial verification flow usually
                 customerService.saveOtp(email, otp);
                 return ResponseEntity.ok("OTP resent successfully.");
             } else {

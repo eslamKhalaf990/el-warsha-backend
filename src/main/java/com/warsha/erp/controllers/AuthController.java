@@ -110,6 +110,45 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/changePassword")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
+        System.out.println("[" + getTimestamp() + "] INFO: Change password attempt for: " + request.email());
+
+        boolean isChanged = customerService.changeCustomerPassword(request.email(), request.oldPassword(), request.newPassword());
+
+        if (isChanged) {
+            return ResponseEntity.ok("Password changed successfully");
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid old password or user not found");
+        }
+    }
+
+    @PostMapping("/forgotPassword")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        System.out.println("[" + getTimestamp() + "] INFO: Forgot password attempt for: " + request.email());
+
+        boolean isSent = customerService.forgotPassword(request.email());
+
+        if (isSent) {
+            return ResponseEntity.ok("OTP sent to email");
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User not found or failed to send email");
+        }
+    }
+
+    @PostMapping("/resetPassword")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        System.out.println("[" + getTimestamp() + "] INFO: Reset password attempt for: " + request.email());
+
+        boolean isReset = customerService.resetCustomerPassword(request.email(), request.otp(), request.newPassword());
+
+        if (isReset) {
+            return ResponseEntity.ok("Password reset successfully");
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired OTP, or user not found");
+        }
+    }
+
     @PostMapping("/register")
     public User register(@RequestBody User user) {
         System.out.println("[" + getTimestamp() + "] INFO: Registering new ERP User: " + user.getUsername());
@@ -131,5 +170,14 @@ public class AuthController {
     }
 
     record VerifyRequest(String email, String otp) {
+    }
+
+    record ChangePasswordRequest(String email, String oldPassword, String newPassword) {
+    }
+
+    record ForgotPasswordRequest(String email) {
+    }
+
+    record ResetPasswordRequest(String email, String otp, String newPassword) {
     }
 }

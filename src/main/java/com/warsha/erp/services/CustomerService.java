@@ -85,12 +85,29 @@ public class CustomerService {
         if (customerOptional.isPresent()) {
             Customer customer = customerOptional.get();
             customer.setOtp(otp);
-            customer.setStatus("Pending");
+            customer.setStatus("Pending"); // Keep pending for signup/verification
             customer.setOtpExpirationTime(LocalDateTime.now().plusMinutes(10)); // OTP valid for 10 minutes
             customerRepository.save(customer);
             System.out.println("[" + getTimestamp() + "] SUCCESS: OTP saved for customer: " + email);
         } else {
             System.out.println("[" + getTimestamp() + "] ERROR: Cannot save OTP, customer not found: " + email);
+             throw new RuntimeException("Customer not found");
+        }
+    }
+
+    public void saveResetOtp(String email, String otp) {
+        System.out.println("[" + getTimestamp() + "] INFO: Saving Reset OTP for customer: " + email);
+        Optional<Customer> customerOptional = customerRepository.findByEmail(email);
+        
+        if (customerOptional.isPresent()) {
+            Customer customer = customerOptional.get();
+            customer.setOtp(otp);
+            // Do NOT change status to Pending for password resets to avoid locking out the user
+            customer.setOtpExpirationTime(LocalDateTime.now().plusMinutes(10));
+            customerRepository.save(customer);
+            System.out.println("[" + getTimestamp() + "] SUCCESS: Reset OTP saved for customer: " + email);
+        } else {
+            System.out.println("[" + getTimestamp() + "] ERROR: Cannot save Reset OTP, customer not found: " + email);
              throw new RuntimeException("Customer not found");
         }
     }
@@ -118,6 +135,76 @@ public class CustomerService {
             }
         } else {
              System.out.println("[" + getTimestamp() + "] ERROR: Customer not found for verification: " + email);
+        }
+        return false;
+    }
+
+    public boolean changeCustomerPassword(String email, String oldPassword, String newPassword) {
+        System.out.println("[" + getTimestamp() + "] INFO: Changing password for customer: " + email);
+        Optional<Customer> customerOptional = customerRepository.findByEmail(email);
+
+        if (customerOptional.isPresent()) {
+            Customer customer = customerOptional.get();
+
+            if (passwordEncoder.matches(oldPassword, customer.getPassword())) {
+                customer.setPassword(passwordEncoder.encode(newPassword));
+                customerRepository.save(customer);
+                System.out.println("[" + getTimestamp() + "] SUCCESS: Password changed successfully for customer: " + email);
+                return true;
+            } else {
+                System.out.println("[" + getTimestamp() + "] WARN: Invalid old password for customer: " + email);
+            }
+        } else {
+            System.out.println("[" + getTimestamp() + "] ERROR: Customer not found for password change: " + email);
+        }
+        return false;
+    }
+
+    public boolean forgotPassword(String email) {
+        System.out.println("[" + getTimestamp() + "] INFO: Forgot password requested for customer: " + email);
+        Optional<Customer> customerOptional = customerRepository.findByEmail(email);
+
+        if (customerOptional.isPresent()) {
+            String otp = emailService.sendOtpEmail(email);
+            if (otp != null) {
+                saveResetOtp(email, otp); // Use saveResetOtp instead of saveOtp
+                System.out.println("[" + getTimestamp() + "] SUCCESS: Forgot password OTP sent and saved for: " + email);
+                return true;
+            } else {
+                System.out.println("[" + getTimestamp() + "] ERROR: Failed to send OTP email for: " + email);
+                return false;
+            }
+        } else {
+            System.out.println("[" + getTimestamp() + "] ERROR: Customer not found for forgot password: " + email);
+            return false;
+        }
+    }
+
+    public boolean resetCustomerPassword(String email, String otp, String newPassword) {
+        System.out.println("[" + getTimestamp() + "] INFO: Resetting password for customer: " + email);
+        Optional<Customer> customerOptional = customerRepository.findByEmail(email);
+
+        if (customerOptional.isPresent()) {
+            Customer customer = customerOptional.get();
+
+            if (customer.getOtp() != null && customer.getOtp().equals(otp)) {
+                if (customer.getOtpExpirationTime() != null && LocalDateTime.now().isBefore(customer.getOtpExpirationTime())) {
+                    customer.setPassword(passwordEncoder.encode(newPassword));
+                    // If they were pending, resetting password can activate them. If already active, it remains active.
+                    customer.setStatus("Active");
+                    customer.setOtp(null);
+                    customer.setOtpExpirationTime(null);
+                    customerRepository.save(customer);
+                    System.out.println("[" + getTimestamp() + "] SUCCESS: Password reset successfully for customer: " + email);
+                    return true;
+                } else {
+                     System.out.println("[" + getTimestamp() + "] WARN: OTP expired for password reset: " + email);
+                }
+            } else {
+                System.out.println("[" + getTimestamp() + "] WARN: Invalid OTP for password reset: " + email);
+            }
+        } else {
+            System.out.println("[" + getTimestamp() + "] ERROR: Customer not found for password reset: " + email);
         }
         return false;
     }
