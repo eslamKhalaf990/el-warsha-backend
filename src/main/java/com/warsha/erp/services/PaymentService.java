@@ -60,7 +60,6 @@ public class PaymentService {
     }
 
     public List<PaymentDto> getPaymentsByOrder(Long orderId) {
-        System.out.println("[" + getTimestamp() + "] INFO: Retrieving payments for Order ID: " + orderId);
         return paymentRepo.findByOrderId(orderId).stream()
                 .map(PaymentDto::new)
                 .collect(Collectors.toList());

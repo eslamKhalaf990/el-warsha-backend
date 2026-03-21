@@ -1,34 +1,40 @@
 package com.warsha.erp.services;
+
 import com.warsha.erp.dtos.ProductDTO;
 import com.warsha.erp.entities.Product;
 import com.warsha.erp.repository.ProductRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.net.MalformedURLException;
 import java.io.IOException;
-import java.net.URI;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
-
 
 @Service
 public class ProductService {
 
-    @Autowired
     private final ProductRepository productRepository;
-    private final GoogleDriveService googleDriveService;
 
-    public ProductService(ProductRepository productRepository, GoogleDriveService googleDriveService) {
+    // This pulls the path from your application.properties,
+    // defaulting to your Ubuntu path if not specified
+    @Value("${image.upload.dir:/var/www/el-warsha/images/}")
+    private String uploadDir;
+
+    @Autowired
+    public ProductService(ProductRepository productRepository) {
         this.productRepository = productRepository;
-        this.googleDriveService = googleDriveService;
     }
 
     public List<ProductDTO> getAllProducts() {
@@ -87,8 +93,10 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
+    // You likely won't need this method anymore since Nginx serves the images,
+    // but I've updated it to read from the local hard drive just in case.
     public Resource getProductImage(String filename) throws MalformedURLException {
-        Path filePath = Paths.get(filename).normalize();
+        Path filePath = Paths.get(uploadDir).resolve(filename).normalize();
         Resource resource = new UrlResource(filePath.toUri());
 
         if (resource.exists() && resource.isReadable()) {
@@ -101,26 +109,16 @@ public class ProductService {
     public Product createProduct(Product product, MultipartFile image) {
         product.setCreatedAt(LocalDateTime.now());
 
-        Product savedProduct = productRepository.save(product);
-
         if (image != null && !image.isEmpty()) {
             try {
-                // Upload to Google Drive instead of local storage
-                String imageUrl = googleDriveService.uploadFile(image);
-
-                // Save the Drive public link in DB
-                savedProduct.setImageUrl(imageUrl);
-                productRepository.save(savedProduct);
-
+                String imageUrl = saveImageToDisk(image);
+                product.setImageUrl(imageUrl);
             } catch (IOException e) {
-                throw new RuntimeException("Failed to save image to Google Drive", e);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Failed to save image to disk", e);
             }
         }
 
-
-        return savedProduct;
+        return productRepository.save(product);
     }
 
     public void updateProduct(Long id, Product updatedProduct) {
@@ -150,13 +148,14 @@ public class ProductService {
 
         if (image != null && !image.isEmpty()) {
             try {
-                // Upload to Google Drive
-                String imageUrl = googleDriveService.uploadFile(image);
+                // Optionally delete the old image from disk to save space
+                deleteImageFromDisk(existing.getImageUrl());
+
+                // Save the new image
+                String imageUrl = saveImageToDisk(image);
                 existing.setImageUrl(imageUrl);
             } catch (IOException e) {
-                throw new RuntimeException("Failed to save image to Google Drive", e);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Failed to save image to disk", e);
             }
         }
 
@@ -167,17 +166,8 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Product not found with id " + id));
 
-        // If product has an image, delete it from Google Drive
-        if (product.getImageUrl() != null) {
-            try {
-                String fileId = extractFileId(product.getImageUrl());
-                if (fileId != null) {
-                    googleDriveService.deleteFile(fileId);
-                }
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to delete image from Google Drive", e);
-            }
-        }
+        // Delete the physical file from the hard drive
+        deleteImageFromDisk(product.getImageUrl());
 
         // Soft delete: mark as deleted
         product.setDeleted("true");
@@ -186,24 +176,50 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    private String extractFileId(String imageUrl) {
-        try {
-            URI uri = new URI(imageUrl);
-            String query = uri.getQuery(); // export=view&id=ABC123XYZ
-            for (String param : query.split("&")) {
-                String[] pair = param.split("=");
-                if (pair.length == 2 && pair[0].equals("id")) {
-                    return pair[1];
-                }
-            }
-        } catch (Exception e) {
-            // log error
-        }
-        return null;
-    }
-
     public void deleteAll() {
         productRepository.deleteAll();
     }
-}
 
+    // --- Private Helper Methods ---
+
+    private String saveImageToDisk(MultipartFile image) throws IOException {
+        Path uploadPath = Paths.get(uploadDir);
+
+        // Create the directory if it doesn't exist yet
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+
+        // Keep original extension, but give it a UUID name to prevent overwriting
+        String originalFilename = image.getOriginalFilename();
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        }
+
+        String uniqueFileName = UUID.randomUUID().toString() + extension;
+        Path filePath = uploadPath.resolve(uniqueFileName);
+
+        // Copy the file to the target location
+        Files.copy(image.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+        // Return the exact string that needs to be saved in the database
+        return "/images/" + uniqueFileName;
+    }
+
+    private void deleteImageFromDisk(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            return;
+        }
+
+        try {
+            // Strip the "/images/" part to get just the filename
+            String filename = imageUrl.replace("/images/", "");
+            Path filePath = Paths.get(uploadDir).resolve(filename).normalize();
+
+            Files.deleteIfExists(filePath);
+        } catch (IOException e) {
+            System.err.println("Failed to delete image file: " + e.getMessage());
+        }
+    }
+}

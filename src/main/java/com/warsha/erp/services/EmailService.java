@@ -24,10 +24,14 @@ import java.util.Random;
 public class EmailService {
 
     @Autowired
-    private JavaMailSender javaMailSender;
+    private final JavaMailSender javaMailSender;
 
     // Formatter for consistent log timestamps
     private final DateTimeFormatter logFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+
+    public EmailService(JavaMailSender javaMailSender) {
+        this.javaMailSender = javaMailSender;
+    }
 
     private String getTimestamp() {
         return LocalDateTime.now().format(logFormat);
@@ -52,17 +56,17 @@ public class EmailService {
             String htmlContent = """
             <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #444; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 25px; text-align: right;">
                 <h2 style="color: #333; border-bottom: 2px solid #f4e4e4; padding-bottom: 10px;">رمز التحقق</h2>
-                
+            
                 <p>استخدم رمز التحقق التالي لإكمال إجراءات التحقق الخاصة بك:</p>
-                
+            
                 <div style="background-color: #fafafa; padding: 20px; border-radius: 8px; margin: 20px 0; border-right: 4px solid #d4a373; text-align: center;">
                     <h1 style="margin: 0; color: #d4a373; letter-spacing: 5px;">%s</h1>
                 </div>
             
                 <p>هذا الرمز صالح لفترة محدودة. لا تشارك هذا الرمز مع أي شخص.</p>
-                
+            
                 <p style="margin-top: 30px;">شكراً لك،<br/><strong>فريق عمل ورشة</strong></p>
-                
+            
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
                 <p style="font-size: 12px; color: #999;">إذا لم تطلب هذا الرمز، يرجى تجاهل هذا البريد الإلكتروني.</p>
             </div>
@@ -119,8 +123,8 @@ public class EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
             helper.setFrom("elwarsha77a@gmail.com");
-//            helper.setTo("ekhalaf990@gmail.com");
-            helper.setTo("ahmednaser77a@gmail.com");
+            helper.setTo("ekhalaf990@gmail.com");
+//            helper.setTo("ahmednaser77a@gmail.com");
             helper.setSubject("New Order Received! (ID: " + orderId + ")");
 
             String emailBody = String.format("""
@@ -175,9 +179,9 @@ public class EmailService {
             String htmlContent = """
             <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #444; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 25px; text-align: right;">
                 <h2 style="color: #333; border-bottom: 2px solid #f4e4e4; padding-bottom: 10px;">شكراً لطلبك من ورشة، %s</h2>
-                
+            
                 <p>يسعدنا إبلاغك أننا استلمنا طلبك رقم <strong>#%s</strong>، وفريقنا يعمل الآن على مراجعته وتجهيزه.</p>
-                
+            
                 <div style="background-color: #fafafa; padding: 20px; border-radius: 8px; margin: 20px 0; border-right: 4px solid #d4a373;">
                     <h3 style="margin-top: 0; color: #d4a373;">تفاصيل الطلب:</h3>
                     <p style="margin: 5px 0;"><strong>رقم الطلب:</strong> %s</p>
@@ -186,18 +190,18 @@ public class EmailService {
                 </div>
             
                 <div style="background-color: #fff9f9; border: 1px solid #f2dede; color: #a94442; padding: 15px; border-radius: 8px; margin: 20px 0; font-size: 14px;">
-                    <strong>ملاحظة هامة:</strong> 
+                    <strong>ملاحظة هامة:</strong>
                     يرجى العلم أنه يجب تأكيد الطلب من خلال سداد "العربون". في حال عدم استلام مبلغ العربون خلال المدة المحددة، سيتم إلغاء الطلب تلقائياً من قِبل النظام.
                 </div>
-                
+            
                 <p>بمجرد تأكيد الدفع وشحن الطلب، سنقوم بإرسال رسالة أخرى لتتبع الشحنة.</p>
-                
+            
                 <p style="margin-top: 30px;">شكراً لاختيارك <strong>ورشة</strong>.</p>
-                
+            
                 <div style="text-align: center; margin-top: 30px;">
                 <a href="https://el-warsha-accessories.web.app" style="background-color: #d4a373; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">تسوقي مرة أخرى</a>
                 </div>
-                
+            
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
                 <p style="font-size: 12px; color: #999;">إذا كان لديك أي استفسار حول كيفية سداد العربون أو تفاصيل طلبك، يمكنك الرد مباشرة على هذا البريد.</p>
             </div>
@@ -225,22 +229,22 @@ public class EmailService {
             String htmlContent = """
         <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #444; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 25px; text-align: right;">
             <h2 style="color: #888; border-bottom: 2px solid #eee; padding-bottom: 10px;">تم إلغاء طلبك، %s</h2>
-            
+        
             <p>نحيطك علماً بأنه تم إلغاء طلبك رقم <strong>#%s</strong> بنجاح.</p>
-            
+        
             <div style="background-color: #fcfcfc; padding: 20px; border-radius: 8px; margin: 20px 0; border-right: 4px solid #888;">
                 <p style="margin: 5px 0;"><strong>رقم الطلب:</strong> %s</p>
                 <p style="margin: 5px 0;"><strong>حالة الطلب:</strong> ملغي</p>
             </div>
-            
+        
             <p>غالباً ما يتم ذلك بسبب عدم استلام مبلغ العربون خلال المدة المحددة، أو بناءً على طلبك الشخصي.</p>
-            
+        
             <p style="margin-top: 20px;">نأمل أن نراكِ مجدداً في <strong>ورشة</strong> قريباً، قطعنا المميزة دائماً بانتظارك!</p>
-            
+        
             <div style="text-align: center; margin-top: 30px;">
                 <a href="https://el-warsha-accessories.web.app" style="background-color: #d4a373; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">تسوقي مرة أخرى</a>
             </div>
-            
+        
             <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0 20px 0;" />
             <p style="font-size: 12px; color: #999;">إذا تم الإلغاء عن طريق الخطأ أو قمتِ بالفعل بتحويل العربون، يرجى التواصل معنا فوراً عبر الرد على هذا البريد.</p>
         </div>
