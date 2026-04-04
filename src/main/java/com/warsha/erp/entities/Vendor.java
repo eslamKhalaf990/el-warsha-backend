@@ -41,7 +41,7 @@ public class Vendor {
     private Boolean isActive = true;
 
     @Column(name = "CreatedAt")
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "UpdatedAt")
     private LocalDateTime updatedAt;
