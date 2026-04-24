@@ -6,6 +6,8 @@ import com.warsha.erp.entities.User;
 import com.warsha.erp.services.CustomerService;
 import com.warsha.erp.services.EmailService;
 import com.warsha.erp.services.UserService;
+import com.warsha.erp.services.UserActivityLogService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -27,6 +29,7 @@ public class AuthController {
     @Autowired private UserService userService;
     @Autowired private CustomerService customerService;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private UserActivityLogService userActivityLogService;
 
     // Formatter for consistent log timestamps
     private final DateTimeFormatter logFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
@@ -56,17 +59,19 @@ public class AuthController {
     }
 
     @PostMapping("/customerLogin")
-    public ResponseEntity<?> customerLogin(@RequestBody LoginRequest request) {
-        System.out.println("[" + getTimestamp() + "] INFO: Customer Login attempt for: " + request.getUsername());
+    public ResponseEntity<?> customerLogin(@RequestBody LoginRequest loginRequest, HttpServletRequest request) {
+        System.out.println("[" + getTimestamp() + "] INFO: Customer Login attempt for: " + loginRequest.getUsername());
 
         try {
-            Customer customer = customerService.findByEmail(request.getUsername());
+            Customer customer = customerService.findByEmail(loginRequest.getUsername());
             
-            if (customer != null && passwordEncoder.matches(request.getPassword(), customer.getPassword())) {
+            if (customer != null && passwordEncoder.matches(loginRequest.getPassword(), customer.getPassword())) {
                 
                 if ("Active".equals(customer.getStatus())) {
                     String token = jwtUtil.generateToken(customer.getEmail(), "CUSTOMER");
                     System.out.println("[" + getTimestamp() + "] SUCCESS: Customer authenticated: " + customer.getEmail());
+
+                    userActivityLogService.logCustomerLogin(customer.getId(), request);
 
                     return ResponseEntity.ok(new CustomerLogin(
                             token,
@@ -89,7 +94,7 @@ public class AuthController {
                 }
             }
 
-            System.out.println("[" + getTimestamp() + "] WARN: Customer Login failed - Wrong password or user null for: " + request.getUsername());
+            System.out.println("[" + getTimestamp() + "] WARN: Customer Login failed - Wrong password or user null for: " + loginRequest.getUsername());
         } catch (Exception e) {
             System.out.println("[" + getTimestamp() + "] ERROR: Customer Login service error: " + e.getMessage());
         }
