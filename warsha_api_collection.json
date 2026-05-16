@@ -1,0 +1,680 @@
+{
+  "info": {
+    "name": "Warsha Backend API Collection",
+    "description": "Generated Postman collection for all Warsha ERP endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "login",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "description": "Login user"
+          }
+        },
+        {
+          "name": "customerLogin",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/customerLogin", "host": ["{{baseUrl}}"], "path": ["auth", "customerLogin"] },
+            "description": "Customer login"
+          }
+        },
+        {
+          "name": "verifyCode",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/verifyCode", "host": ["{{baseUrl}}"], "path": ["auth", "verifyCode"] },
+            "description": "Verify code"
+          }
+        },
+        {
+          "name": "changePassword",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/changePassword", "host": ["{{baseUrl}}"], "path": ["auth", "changePassword"] },
+            "description": "Change password"
+          }
+        },
+        {
+          "name": "forgotPassword",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/forgotPassword", "host": ["{{baseUrl}}"], "path": ["auth", "forgotPassword"] },
+            "description": "Forgot password"
+          }
+        },
+        {
+          "name": "resetPassword",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/resetPassword", "host": ["{{baseUrl}}"], "path": ["auth", "resetPassword"] },
+            "description": "Reset password"
+          }
+        },
+        {
+          "name": "register",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+            "description": "Register user"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bank Transaction",
+      "item": [
+        {
+          "name": "addTransaction",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/bank/transaction", "host": ["{{baseUrl}}"], "path": ["api", "bank", "transaction"] },
+            "description": "Add transaction"
+          }
+        },
+        {
+          "name": "getTransactions",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/bank/transactions", "host": ["{{baseUrl}}"], "path": ["api", "bank", "transactions"] },
+            "description": "Get all transactions"
+          }
+        },
+        {
+          "name": "getTransactions by Account",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/bank/transactions/:accountId", "host": ["{{baseUrl}}"], "path": ["api", "bank", "transactions", ":accountId"], "variable": [{"key": "accountId", "value": ""}] },
+            "description": "Get transactions by account"
+          }
+        },
+        {
+          "name": "getBalance",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/bank/balance/:accountId", "host": ["{{baseUrl}}"], "path": ["api", "bank", "balance", ":accountId"], "variable": [{"key": "accountId", "value": ""}] },
+            "description": "Get balance"
+          }
+        },
+        {
+          "name": "getSummary",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/bank/summary", "host": ["{{baseUrl}}"], "path": ["api", "bank", "summary"] },
+            "description": "Get summary"
+          }
+        },
+        {
+          "name": "getAllAccounts",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/bank/accounts", "host": ["{{baseUrl}}"], "path": ["api", "bank", "accounts"] },
+            "description": "Get all accounts"
+          }
+        },
+        {
+          "name": "getTransactionCategories",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/bank/transactionCategories", "host": ["{{baseUrl}}"], "path": ["api", "bank", "transactionCategories"] },
+            "description": "Get transaction categories"
+          }
+        },
+        {
+          "name": "resetSystem",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/bank/resetTransactions", "host": ["{{baseUrl}}"], "path": ["api", "bank", "resetTransactions"] },
+            "description": "Reset system"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cash Flow",
+      "item": [
+        {
+          "name": "getDailyCashFlow",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/daily", "host": ["{{baseUrl}}"], "path": ["cashFlow", "daily"] },
+            "description": "Get daily cash flow"
+          }
+        },
+        {
+          "name": "getRevenueSummary",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/revenueSummary", "host": ["{{baseUrl}}"], "path": ["cashFlow", "revenueSummary"] },
+            "description": "Get revenue summary"
+          }
+        },
+        {
+          "name": "getTop5SoldProductsForMonth",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/topSoldProducts", "host": ["{{baseUrl}}"], "path": ["cashFlow", "topSoldProducts"] },
+            "description": "Get top 5 sold products for month"
+          }
+        },
+        {
+          "name": "getCustomerLoyaltyReport",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/analysis/customers/loyalty", "host": ["{{baseUrl}}"], "path": ["cashFlow", "analysis", "customers", "loyalty"] },
+            "description": "Get customer loyalty report"
+          }
+        },
+        {
+          "name": "getTopVipCustomers",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/analysis/customers/vip", "host": ["{{baseUrl}}"], "path": ["cashFlow", "analysis", "customers", "vip"] },
+            "description": "Get top VIP customers"
+          }
+        },
+        {
+          "name": "getAtRiskCustomers",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/analysis/customers/at-risk", "host": ["{{baseUrl}}"], "path": ["cashFlow", "analysis", "customers", "at-risk"] },
+            "description": "Get at risk customers"
+          }
+        },
+        {
+          "name": "getRevenueBySource",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/analysis/revenue-by-source", "host": ["{{baseUrl}}"], "path": ["cashFlow", "analysis", "revenue-by-source"] },
+            "description": "Get revenue by source"
+          }
+        },
+        {
+          "name": "getDiscountSeekers",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/analysis/discount-seekers", "host": ["{{baseUrl}}"], "path": ["cashFlow", "analysis", "discount-seekers"] },
+            "description": "Get discount seekers"
+          }
+        },
+        {
+          "name": "getTop20Products",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/analysis/products/top-performers", "host": ["{{baseUrl}}"], "path": ["cashFlow", "analysis", "products", "top-performers"] },
+            "description": "Get top 20 products"
+          }
+        },
+        {
+          "name": "getPerformanceByGovernorate",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/analysis/governorate-performance", "host": ["{{baseUrl}}"], "path": ["cashFlow", "analysis", "governorate-performance"] },
+            "description": "Get performance by governorate"
+          }
+        },
+        {
+          "name": "getAverageBasketSize",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/analysis/kpi/average-basket-size", "host": ["{{baseUrl}}"], "path": ["cashFlow", "analysis", "kpi", "average-basket-size"] },
+            "description": "Get average basket size"
+          }
+        },
+        {
+          "name": "getDailyRevenueReport",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/cashFlow/analysis/daily-revenue-report", "host": ["{{baseUrl}}"], "path": ["cashFlow", "analysis", "daily-revenue-report"] },
+            "description": "Get daily revenue report"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Category",
+      "item": [
+        {
+          "name": "getAll",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/category", "host": ["{{baseUrl}}"], "path": ["category"] },
+            "description": "Get all categories"
+          }
+        },
+        {
+          "name": "create",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/category", "host": ["{{baseUrl}}"], "path": ["category"] },
+            "description": "Create category"
+          }
+        },
+        {
+          "name": "delete",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/category/:id", "host": ["{{baseUrl}}"], "path": ["category", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Delete category"
+          }
+        },
+        {
+          "name": "update",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/category/:id", "host": ["{{baseUrl}}"], "path": ["category", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Update category"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customer",
+      "item": [
+        {
+          "name": "getAll",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/customers", "host": ["{{baseUrl}}"], "path": ["customers"] },
+            "description": "Get all customers"
+          }
+        },
+        {
+          "name": "getCountsByGovernorate",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/customers/countsByGovernorate", "host": ["{{baseUrl}}"], "path": ["customers", "countsByGovernorate"] },
+            "description": "Get counts by governorate"
+          }
+        },
+        {
+          "name": "getById",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/customers/:id", "host": ["{{baseUrl}}"], "path": ["customers", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Get customer by id"
+          }
+        },
+        {
+          "name": "create",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/customers", "host": ["{{baseUrl}}"], "path": ["customers"] },
+            "description": "Create customer"
+          }
+        },
+        {
+          "name": "customerSignUp",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/customers/customerSignUp", "host": ["{{baseUrl}}"], "path": ["customers", "customerSignUp"] },
+            "description": "Customer sign up"
+          }
+        },
+        {
+          "name": "update",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/customers/:id", "host": ["{{baseUrl}}"], "path": ["customers", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Update customer"
+          }
+        },
+        {
+          "name": "delete",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/customers/:id", "host": ["{{baseUrl}}"], "path": ["customers", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Delete customer"
+          }
+        },
+        {
+          "name": "deleteAll",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/customers", "host": ["{{baseUrl}}"], "path": ["customers"] },
+            "description": "Delete all customers"
+          }
+        },
+        {
+          "name": "resendOtp",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/customers/resend-otp?email=example@example.com", "host": ["{{baseUrl}}"], "path": ["customers", "resend-otp"], "query": [{"key": "email", "value": "example@example.com"}] },
+            "description": "Resend OTP"
+          }
+        }
+      ]
+    },
+    {
+      "name": "File",
+      "item": [
+        {
+          "name": "getFile",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/files/:fileId", "host": ["{{baseUrl}}"], "path": ["api", "files", ":fileId"], "variable": [{"key": "fileId", "value": ""}] },
+            "description": "Get file"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoice",
+      "item": [
+        {
+          "name": "generateInvoice",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/invoice/:id", "host": ["{{baseUrl}}"], "path": ["invoice", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Generate invoice"
+          }
+        },
+        {
+          "name": "getInvoiceById",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/invoice/:id", "host": ["{{baseUrl}}"], "path": ["invoice", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Get invoice by id"
+          }
+        },
+        {
+          "name": "getAllInvoices",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/invoice", "host": ["{{baseUrl}}"], "path": ["invoice"] },
+            "description": "Get all invoices"
+          }
+        },
+        {
+          "name": "getInvoicePdf",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/invoice/pdf/:id", "host": ["{{baseUrl}}"], "path": ["invoice", "pdf", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Get invoice PDF"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Order",
+      "item": [
+        {
+          "name": "createOrder",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] },
+            "description": "Create order"
+          }
+        },
+        {
+          "name": "placeOrder",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/orders/placeOrder", "host": ["{{baseUrl}}"], "path": ["orders", "placeOrder"] },
+            "description": "Place order"
+          }
+        },
+        {
+          "name": "getOrderCountsByGovernorate",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/orders/countGovernorates", "host": ["{{baseUrl}}"], "path": ["orders", "countGovernorates"] },
+            "description": "Get order counts by governorate"
+          }
+        },
+        {
+          "name": "updateOrder",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/orders/:id", "host": ["{{baseUrl}}"], "path": ["orders", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Update order"
+          }
+        },
+        {
+          "name": "updateOrderStatus",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/orders/status/:id", "host": ["{{baseUrl}}"], "path": ["orders", "status", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Update order status"
+          }
+        },
+        {
+          "name": "getAllOrders",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] },
+            "description": "Get all orders"
+          }
+        },
+        {
+          "name": "getAllOrdersByCustomerId",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/orders/customer", "host": ["{{baseUrl}}"], "path": ["orders", "customer"] },
+            "description": "Get all orders by customer"
+          }
+        },
+        {
+          "name": "deleteOrder",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/orders/:id", "host": ["{{baseUrl}}"], "path": ["orders", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Delete order"
+          }
+        },
+        {
+          "name": "cancelOrder",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/orders/cancel/:id", "host": ["{{baseUrl}}"], "path": ["orders", "cancel", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Cancel order"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payment",
+      "item": [
+        {
+          "name": "createPayment",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/payments", "host": ["{{baseUrl}}"], "path": ["payments"] },
+            "description": "Create payment"
+          }
+        },
+        {
+          "name": "getAllPayments",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/payments", "host": ["{{baseUrl}}"], "path": ["payments"] },
+            "description": "Get all payments"
+          }
+        },
+        {
+          "name": "getPaymentsByOrder",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/payments/order/:orderId", "host": ["{{baseUrl}}"], "path": ["payments", "order", ":orderId"], "variable": [{"key": "orderId", "value": ""}] },
+            "description": "Get payments by order"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product",
+      "item": [
+        {
+          "name": "getAll",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] },
+            "description": "Get all products"
+          }
+        },
+        {
+          "name": "getAllByCategoryId",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/products/getByCategoryId?categoryId=1", "host": ["{{baseUrl}}"], "path": ["products", "getByCategoryId"], "query": [{"key": "categoryId", "value": "1"}] },
+            "description": "Get products by category"
+          }
+        },
+        {
+          "name": "getProductImage",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/products/getImage?filename=example.jpg", "host": ["{{baseUrl}}"], "path": ["products", "getImage"], "query": [{"key": "filename", "value": "example.jpg"}] },
+            "description": "Get product image"
+          }
+        },
+        {
+          "name": "getById",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/products/:id", "host": ["{{baseUrl}}"], "path": ["products", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Get product by id"
+          }
+        },
+        {
+          "name": "create",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] },
+            "description": "Create product"
+          }
+        },
+        {
+          "name": "updateProduct",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/products/:id", "host": ["{{baseUrl}}"], "path": ["products", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Update product"
+          }
+        },
+        {
+          "name": "delete",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/products/:id", "host": ["{{baseUrl}}"], "path": ["products", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Delete product"
+          }
+        },
+        {
+          "name": "deleteAll",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] },
+            "description": "Delete all products"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shipping Zone",
+      "item": [
+        {
+          "name": "getAll",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/shipping", "host": ["{{baseUrl}}"], "path": ["shipping"] },
+            "description": "Get all shipping zones"
+          }
+        },
+        {
+          "name": "getById",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/shipping/:id", "host": ["{{baseUrl}}"], "path": ["shipping", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Get shipping zone by id"
+          }
+        },
+        {
+          "name": "create",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/shipping", "host": ["{{baseUrl}}"], "path": ["shipping"] },
+            "description": "Create shipping zone"
+          }
+        },
+        {
+          "name": "delete",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/shipping/:id", "host": ["{{baseUrl}}"], "path": ["shipping", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Delete shipping zone"
+          }
+        },
+        {
+          "name": "updatePrice",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/shipping/:id?shippingFee=0.0", "host": ["{{baseUrl}}"], "path": ["shipping", ":id"], "variable": [{"key": "id", "value": ""}], "query": [{"key": "shippingFee", "value": "0.0"}] },
+            "description": "Update shipping zone"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vendor",
+      "item": [
+        {
+          "name": "getAll",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/vendors", "host": ["{{baseUrl}}"], "path": ["vendors"] },
+            "description": "Get all vendors"
+          }
+        },
+        {
+          "name": "create",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/vendors", "host": ["{{baseUrl}}"], "path": ["vendors"] },
+            "description": "Create vendor"
+          }
+        },
+        {
+          "name": "update",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/vendors/:id", "host": ["{{baseUrl}}"], "path": ["vendors", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Update vendor"
+          }
+        },
+        {
+          "name": "delete",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/vendors/:id", "host": ["{{baseUrl}}"], "path": ["vendors", ":id"], "variable": [{"key": "id", "value": ""}] },
+            "description": "Delete vendor"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Voucher",
+      "item": [
+        {
+          "name": "validateVoucher",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/vouchers/validate", "host": ["{{baseUrl}}"], "path": ["vouchers", "validate"] },
+            "description": "Validate voucher"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ]
+}

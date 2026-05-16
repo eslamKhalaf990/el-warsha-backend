@@ -72,8 +72,10 @@ public class CustomerService {
         System.out.println("[" + getTimestamp() + "] SUCCESS: Customer saved with ID: " + saved.getId());
 
         // Generate and save OTP
-        String otp = emailService.sendOtpEmail(saved.getEmail());
-        saveOtp(saved.getEmail(), otp);
+        if(saved.getEmail() != null && !saved.getEmail().isEmpty()){
+            String otp = emailService.sendOtpEmail(saved.getEmail());
+            saveOtp(saved.getEmail(), otp);
+        }
 
         return saved;
     }
