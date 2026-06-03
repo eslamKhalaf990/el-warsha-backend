@@ -444,4 +444,4 @@ All API responses follow a consistent format with proper HTTP status codes:
 
 ## License
 
-This project is proprietary software for Warsha business operations.
+Private project. All rights reserved.
