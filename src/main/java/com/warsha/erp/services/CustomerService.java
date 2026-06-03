@@ -1,6 +1,7 @@
 package com.warsha.erp.services;
 
 import com.warsha.erp.dtos.CustomerCountByGovernorate;
+import com.warsha.erp.dtos.CustomerInfoDTO;
 import com.warsha.erp.entities.Customer;
 import com.warsha.erp.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +54,24 @@ public class CustomerService {
                     System.out.println("[" + getTimestamp() + "] ERROR: Customer not found for ID: " + id);
                     return new RuntimeException("Customer not found");
                 });
+    }
+
+    public CustomerInfoDTO getCustomerInfo(Long id) {
+        System.out.println("[" + getTimestamp() + "] INFO: Finding customer info by ID: " + id);
+        Customer customer = getCustomerByID(id);
+        return new CustomerInfoDTO(
+                customer.getId(),
+                customer.getFullName(),
+                customer.getGovernorate(),
+                customer.getPhone(),
+                customer.getCity(),
+                customer.getSecondaryPhone(),
+                customer.getAddress(),
+                customer.getEmail(),
+                customer.getCreatedAt(),
+                customer.getUpdatedAt(),
+                customer.getStatus()
+        );
     }
 
     public Customer createCustomer(Customer customer) {

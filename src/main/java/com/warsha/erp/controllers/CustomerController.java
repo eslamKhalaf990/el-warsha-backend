@@ -2,6 +2,7 @@ package com.warsha.erp.controllers;
 
 import com.warsha.erp.config.JwtUtil;
 import com.warsha.erp.dtos.CustomerCountByGovernorate;
+import com.warsha.erp.dtos.CustomerInfoDTO;
 import com.warsha.erp.entities.Customer;
 import com.warsha.erp.services.CustomerService;
 import com.warsha.erp.services.EmailService;
@@ -50,6 +51,12 @@ public class CustomerController {
     public ResponseEntity<Customer> getById(@PathVariable Long id) {
         System.out.println("[" + getTimestamp() + "] INFO: Request to fetch customer ID: " + id);
         return ResponseEntity.ok(customerService.getCustomerByID(id));
+    }
+
+    @GetMapping("/{id}/info")
+    public ResponseEntity<CustomerInfoDTO> getCustomerInfo(@PathVariable Long id) {
+        System.out.println("[" + getTimestamp() + "] INFO: Request to fetch customer info ID: " + id);
+        return ResponseEntity.ok(customerService.getCustomerInfo(id));
     }
 
     @PostMapping
